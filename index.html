@@ -1044,37 +1044,42 @@ async function importarExcel(input) {
   if (!confirm(`Importar ${rows.length} registros para GTI_Pedidos?`)) return;
 
   // Mapeamento colunas Excel → campos internos SharePoint
-  const MAP = {
-    'Ano': (v) => ({ Title: String(v||'') }),
-    'ADC': (v) => ({ field_1: String(v||'') }),
-    'Solicitante': (v) => { const n = Number(v); return isNaN(n) ? {} : { field_2: n }; },
-    'Projeto': (v) => { const n = Number(v); return isNaN(n) ? {} : { field_3: n }; },
-    'SC': (v) => ({ field_4: String(v||'') }),
-    'Destino': (v) => ({ field_5: String(v||'') }),
-    'Modelo': (v) => ({ field_6: String(v||'') }),
-    'PN': (v) => ({ field_7: String(v||'') }),
-    'Quantidade': (v) => { const n = Number(v); return isNaN(n) ? {} : { field_8: n }; },
-    'ValorUnit': (v) => { const n = Number(v); return isNaN(n) ? {} : { field_9: n }; },
-    'ValorTotal': (v) => { const n = Number(v); return isNaN(n) ? {} : { field_10: n }; },
-    'DataPedido': (v) => v ? { field_11: String(v) } : {},
-    'DataPrevista': (v) => v ? { field_12: String(v) } : {},
-    'NotaFiscal': (v) => { const n = Number(v); return isNaN(n) ? {} : { field_13: n }; },
-    'DataEntrega': (v) => v ? { field_14: String(v) } : {},
-    'LeadTime': (v) => { const n = Number(v); return isNaN(n) ? {} : { field_15: n }; },
-    'Observacoes': (v) => v ? { field_16: String(v) } : {},
-    'Status': (v) => ({ field_17: String(v||'') }),
-  };
+  // Campos NUMBER só recebem números válidos, o resto é ignorado
+  function toNum(v) { const n = parseFloat(String(v).replace(',','.')); return isFinite(n) ? n : null; }
+
+  function mapRow(row) {
+    const f = {};
+    // Title (texto) - obrigatório
+    if (row['Ano']) f.Title = String(row['Ano']);
+    // Textos
+    if (row['ADC']) f.field_1 = String(row['ADC']);
+    if (row['SC']) f.field_4 = String(row['SC']);
+    if (row['Destino']) f.field_5 = String(row['Destino']);
+    if (row['Modelo']) f.field_6 = String(row['Modelo']);
+    if (row['PN']) f.field_7 = String(row['PN']);
+    if (row['Status']) f.field_17 = String(row['Status']);
+    // Números
+    const solic = toNum(row['Solicitante']); if (solic !== null) f.field_2 = solic;
+    const proj = toNum(row['Projeto']); if (proj !== null) f.field_3 = proj;
+    const qtd = toNum(row['Quantidade']); if (qtd !== null) f.field_8 = qtd;
+    const vunit = toNum(row['ValorUnit']); if (vunit !== null) f.field_9 = vunit;
+    const vtotal = toNum(row['ValorTotal']); if (vtotal !== null) f.field_10 = vtotal;
+    const nf = toNum(row['NotaFiscal']); if (nf !== null) f.field_13 = nf;
+    const lead = toNum(row['LeadTime']); if (lead !== null) f.field_15 = lead;
+    // Datas e Obs são NUMBER no SP - só enviar se for número
+    const dpedido = toNum(row['DataPedido']); if (dpedido !== null) f.field_11 = dpedido;
+    const dprev = toNum(row['DataPrevista']); if (dprev !== null) f.field_12 = dprev;
+    const dentrega = toNum(row['DataEntrega']); if (dentrega !== null) f.field_14 = dentrega;
+    const obs = toNum(row['Observacoes']); if (obs !== null) f.field_16 = obs;
+    return f;
+  }
 
   const URL = `${graphBase}/sites/${CONFIG.siteId}/lists/${CONFIG.listPedidos}/items`;
   let ok = 0, erros = 0;
   const total = rows.length;
 
   for (let i = 0; i < total; i++) {
-    const row = rows[i];
-    let fields = {};
-    for (const [col, fn] of Object.entries(MAP)) {
-      if (row[col] !== undefined && row[col] !== '') Object.assign(fields, fn(row[col]));
-    }
+    const fields = mapRow(rows[i]);
     try {
       await getToken();
       const r = await fetch(URL, {
