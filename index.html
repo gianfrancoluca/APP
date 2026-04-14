@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GTI — Entregas & Estoque</title>
-<script src="https://alcdn.msauth.net/lib/1.4.18/js/msal.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.6.0/lib/msal-browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -567,15 +567,29 @@ const msalConfig = {
   cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: true }
 };
 
-const msalApp = new Msal.UserAgentApplication(msalConfig);
 const loginRequest = { scopes: ['User.Read', 'Sites.ReadWrite.All'] };
 let accessToken = null;
 let currentUser = null;
+let msalApp = null;
 
 // State
 let pedidos = [], estoque = [], movimentos = [];
 let darkMode = false;
 let currentPage = 'entregas';
+
+// ── Init MSAL ──
+async function initMsal() {
+  msalApp = new msal.PublicClientApplication(msalConfig);
+  await msalApp.initialize();
+  const accounts = msalApp.getAllAccounts();
+  if (accounts.length > 0) {
+    currentUser = accounts[0];
+    try {
+      await getToken();
+      showApp();
+    } catch(e) { console.log('Silent login failed'); }
+  }
+}
 
 // ── Auth Functions ──
 async function doLogin() {
@@ -585,6 +599,7 @@ async function doLogin() {
         '⚠️ Configure o CLIENT_ID e TENANT_ID no código antes de usar. Veja o README.';
       return;
     }
+    if (!msalApp) await initMsal();
     const resp = await msalApp.loginPopup(loginRequest);
     currentUser = resp.account;
     await getToken();
@@ -596,7 +611,7 @@ async function doLogin() {
 
 async function getToken() {
   try {
-    const resp = await msalApp.acquireTokenSilent(loginRequest);
+    const resp = await msalApp.acquireTokenSilent({ ...loginRequest, account: currentUser });
     accessToken = resp.accessToken;
   } catch (e) {
     const resp = await msalApp.acquireTokenPopup(loginRequest);
@@ -605,7 +620,7 @@ async function getToken() {
 }
 
 function doLogout() {
-  msalApp.logout();
+  msalApp.logoutPopup();
 }
 
 function showApp() {
@@ -621,11 +636,8 @@ function showApp() {
   loadAllData();
 }
 
-// Check existing session
-if (msalApp.getAccount()) {
-  currentUser = msalApp.getAccount();
-  getToken().then(() => showApp()).catch(() => {});
-}
+// Init MSAL on load
+initMsal().catch(e => console.log('MSAL init:', e));
 
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  GRAPH API — CRUD SHAREPOINT                                ║
