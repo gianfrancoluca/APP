@@ -1082,15 +1082,25 @@ async function importarExcel(input) {
     const fields = mapRow(rows[i]);
     try {
       await getToken();
-      const r = await fetch(URL, {
+      let r = await fetch(URL, {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
         body: JSON.stringify({ fields })
       });
-      if (r.ok) ok++; else erros++;
+      // Retry once on 500/429 errors
+      if (r.status === 500 || r.status === 429) {
+        await new Promise(r => setTimeout(r, 2000));
+        await getToken();
+        r = await fetch(URL, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields })
+        });
+      }
+      if (r.ok) ok++; else { erros++; if (erros <= 3) { const t = await r.text(); console.error('Erro linha '+(i+1)+':', t); } }
     } catch(e) { erros++; }
-    if (i % 100 === 0) toast(`Importando: ${i+1}/${total} (${ok} ok, ${erros} erros)`, 'warn');
-    if (i % 5 === 0) await new Promise(r => setTimeout(r, 100));
+    if (i % 50 === 0) toast(`Importando: ${i+1}/${total} (${ok} ok, ${erros} erros)`, 'warn');
+    await new Promise(r => setTimeout(r, 500));
   }
 
   toast(`Importação concluída! ${ok} de ${total}`, ok > 0 ? 'ok' : 'err');
