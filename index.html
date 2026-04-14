@@ -344,6 +344,7 @@ input, select, textarea { font-family:var(--font); }
     <button class="h-btn" onclick="openModal('estoque')">+ Estoque</button>
     <button class="h-btn" onclick="openModal('movimento')">+ Movimento</button>
     <button class="h-btn" onclick="exportExcel()">⬇ Excel</button>
+    <button class="h-btn" onclick="importarPedidos()" style="background:var(--success-light);color:var(--success);border-color:var(--success)">⬆ Importar</button>
     <button class="h-btn" onclick="toggleTheme()">🌙</button>
     <button class="h-btn" onclick="doLogout()">Sair</button>
   </div>
@@ -1022,6 +1023,41 @@ async function moverDoEstoque(estoqueId) {
     toast('Movimentação registrada!', 'ok');
     await loadAllData();
   } catch (e2) { toast('Erro: ' + e2.message, 'err'); }
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  IMPORTAR PEDIDOS DO JSON                                    ║
+// ╚══════════════════════════════════════════════════════════════╝
+async function importarPedidos() {
+  if (!confirm('Importar todos os pedidos do arquivo pedidos_data.json? Isso pode levar alguns minutos.')) return;
+  toast('Buscando dados...', 'warn');
+  try {
+    const r = await fetch('https://gianfrancoluca.github.io/APP/pedidos_data.json');
+    if (!r.ok) throw new Error('JSON não encontrado. Suba o pedidos_data.json no GitHub.');
+    const dados = await r.json();
+    const URL = `${graphBase}/sites/${CONFIG.siteId}/lists/${CONFIG.listPedidos}/items`;
+    let ok = 0, erros = 0;
+    const total = dados.length;
+    toast(`Importando ${total} registros...`, 'warn');
+    for (let i = 0; i < total; i++) {
+      try {
+        await getToken();
+        const x = await fetch(URL, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+          body: JSON.stringify(dados[i])
+        });
+        if (x.ok) ok++; else erros++;
+      } catch(e) { erros++; }
+      if (i % 100 === 0) toast(`Progresso: ${i+1}/${total} (${ok} ok, ${erros} erros)`, 'warn');
+      if (i % 5 === 0) await new Promise(r => setTimeout(r, 100));
+    }
+    toast(`Importação concluída! ${ok} de ${total} registros.`, 'ok');
+    alert(`Importação concluída! ${ok} importados, ${erros} erros.`);
+    await loadAllData();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  }
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
