@@ -674,7 +674,7 @@ async function graphPatch(url, body) {
 }
 
 function listUrl(listName) {
-  return `/sites/${CONFIG.siteId}/lists/${listName}/items?expand=fields&$top=5000`;
+  return `/sites/${CONFIG.siteId}/lists/${listName}/items?$expand=fields&$top=5000`;
 }
 
 function itemUrl(listName, itemId) {
