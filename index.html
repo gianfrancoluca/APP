@@ -613,11 +613,20 @@ async function doLogin() {
 
 async function getToken() {
   try {
-    const resp = await msalApp.acquireTokenSilent({ ...loginRequest, account: currentUser });
+    const accounts = msalApp.getAllAccounts();
+    if (!accounts.length) throw new Error('No account');
+    const resp = await msalApp.acquireTokenSilent({ ...loginRequest, account: accounts[0] });
     accessToken = resp.accessToken;
+    return accessToken;
   } catch (e) {
-    const resp = await msalApp.acquireTokenPopup(loginRequest);
-    accessToken = resp.accessToken;
+    try {
+      const resp = await msalApp.acquireTokenPopup(loginRequest);
+      accessToken = resp.accessToken;
+      return accessToken;
+    } catch(e2) {
+      console.error('Token error:', e2);
+      return accessToken;
+    }
   }
 }
 
@@ -1081,14 +1090,14 @@ async function importarExcel(input) {
   for (let i = 0; i < total; i++) {
     const fields = mapRow(rows[i]);
     try {
-      await getToken();
+      if (i % 50 === 0) await getToken();
       let r = await fetch(URL, {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
         body: JSON.stringify({ fields })
       });
-      // Retry once on 500/429 errors
-      if (r.status === 500 || r.status === 429) {
+      // Retry once on 500/429/401 errors
+      if (r.status === 500 || r.status === 429 || r.status === 401) {
         await new Promise(r => setTimeout(r, 2000));
         await getToken();
         r = await fetch(URL, {
