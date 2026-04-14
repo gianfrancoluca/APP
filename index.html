@@ -685,6 +685,64 @@ function newItemUrl(listName) {
   return `/sites/${CONFIG.siteId}/lists/${listName}/items`;
 }
 
+// ── Field Mappings (internal SharePoint names → friendly names) ──
+function mapPedido(f) {
+  return {
+    id: f.id,
+    Title: f.Title || '',
+    ADC: f.field_1 || '',
+    Solicitante: f.field_2 || '',
+    Projeto: f.field_3 || '',
+    SC: f.field_4 || '',
+    Destino: f.field_5 || '',
+    Modelo: f.field_6 || '',
+    PN: f.field_7 || '',
+    Quantidade: f.field_8 || 0,
+    ValorUnit: f.field_9 || 0,
+    ValorTotal: f.field_10 || 0,
+    DataPedido: f.field_11 || '',
+    DataPrevista: f.field_12 || '',
+    NotaFiscal: f.field_13 || '',
+    DataEntrega: f.field_14 || '',
+    LeadTime: f.field_15 || '',
+    Observacoes: f.field_16 || '',
+    Status: f.field_17 || '',
+    Modified: f.Modified || '',
+  };
+}
+
+function mapEstoque(f) {
+  return {
+    id: f.id,
+    Nome: f.Title || '',
+    PN: f.field_1 || '',
+    Quantidade: f.field_2 || 0,
+    QtdDisponivel: f.field_3 || 0,
+    Localizacao: f.field_4 || '',
+    SCOrigem: f.field_5 || '',
+    DataEntrada: f.field_6 || '',
+    StatusEstoque: f.field_7 || '',
+    Origem: f.field_8 || '',
+    Modified: f.Modified || '',
+  };
+}
+
+function mapMovimento(f) {
+  return {
+    id: f.id,
+    Nome: f.Title || '',
+    TipoMovimento: f.field_1 || '',
+    Modelo: f.field_2 || '',
+    Quantidade: f.field_3 || 0,
+    Responsavel: f.field_4 || '',
+    Localizacao: f.field_5 || '',
+    SCReferencia: f.field_6 || '',
+    Destino: f.field_7 || '',
+    Observacoes: f.field_8 || '',
+    Modified: f.Modified || '',
+  };
+}
+
 // ── Load All Data ──
 async function loadAllData() {
   toast('Carregando dados...', 'warn');
@@ -694,9 +752,9 @@ async function loadAllData() {
       graphGet(listUrl(CONFIG.listEstoque)),
       graphGet(listUrl(CONFIG.listMovimentos)),
     ]);
-    pedidos = (pRes.value || []).map(i => ({ id: i.id, ...i.fields }));
-    estoque = (eRes.value || []).map(i => ({ id: i.id, ...i.fields }));
-    movimentos = (mRes.value || []).map(i => ({ id: i.id, ...i.fields }));
+    pedidos = (pRes.value || []).map(i => mapPedido({ id: i.id, ...i.fields }));
+    estoque = (eRes.value || []).map(i => mapEstoque({ id: i.id, ...i.fields }));
+    movimentos = (mRes.value || []).map(i => mapMovimento({ id: i.id, ...i.fields }));
     renderAll();
     toast('Dados carregados!', 'ok');
   } catch (e) {
@@ -852,18 +910,18 @@ function renderAll() { renderEntregas(); renderEstoque(); renderMovimentos(); }
 // ╚══════════════════════════════════════════════════════════════╝
 async function salvarPedido() {
   const fields = {
-    Title:         v('f-ped-title'),
-    Solicitante:   v('f-ped-solic'),
-    Projeto:       v('f-ped-projeto'),
-    Modelo:        v('f-ped-modelo'),
-    PN:            v('f-ped-pn'),
-    Quantidade:    Number(v('f-ped-qtd')) || 0,
-    ValorUnit:     Number(v('f-ped-vunit')) || 0,
-    DataPedido:    v('f-ped-dpedido') || null,
-    DataPrevista:  v('f-ped-dprev') || null,
-    Status:        v('f-ped-status'),
-    DataEntrega:   v('f-ped-dentrega') || null,
-    Observacoes:   v('f-ped-obs'),
+    Title:     v('f-ped-title'),
+    field_2:   v('f-ped-solic'),
+    field_3:   v('f-ped-projeto'),
+    field_6:   v('f-ped-modelo'),
+    field_7:   v('f-ped-pn'),
+    field_8:   Number(v('f-ped-qtd')) || 0,
+    field_9:   Number(v('f-ped-vunit')) || 0,
+    field_11:  v('f-ped-dpedido') || null,
+    field_12:  v('f-ped-dprev') || null,
+    field_17:  v('f-ped-status'),
+    field_14:  v('f-ped-dentrega') || null,
+    field_16:  v('f-ped-obs'),
   };
   try {
     await graphPost(newItemUrl(CONFIG.listPedidos), { fields });
@@ -876,13 +934,13 @@ async function salvarPedido() {
 
 async function salvarEstoque() {
   const fields = {
-    Nome:           v('f-est-nome'),
-    PN:             v('f-est-pn'),
-    Quantidade:     Number(v('f-est-qtd')) || 0,
-    QtdDisponivel:  Number(v('f-est-qtddisp')) || 0,
-    StatusEstoque:  v('f-est-status'),
-    Origem:         v('f-est-origem'),
-    DataEntrada:    new Date().toISOString(),
+    Title:     v('f-est-nome'),
+    field_1:   v('f-est-pn'),
+    field_2:   Number(v('f-est-qtd')) || 0,
+    field_3:   Number(v('f-est-qtddisp')) || 0,
+    field_7:   v('f-est-status'),
+    field_8:   v('f-est-origem'),
+    field_6:   new Date().toISOString(),
   };
   try {
     await graphPost(newItemUrl(CONFIG.listEstoque), { fields });
@@ -895,14 +953,14 @@ async function salvarEstoque() {
 
 async function salvarMovimento() {
   const fields = {
-    Nome:         v('f-mov-nome'),
-    Modelo:       v('f-mov-modelo'),
-    Quantidade:   Number(v('f-mov-qtd')) || 0,
-    Destino:      v('f-mov-destino'),
-    Responsavel:  v('f-mov-resp'),
-    Localizacao:  v('f-mov-local'),
-    SCReferencia: v('f-mov-sc'),
-    Observacoes:  v('f-mov-obs'),
+    Title:     v('f-mov-nome'),
+    field_2:   v('f-mov-modelo'),
+    field_3:   Number(v('f-mov-qtd')) || 0,
+    field_7:   v('f-mov-destino'),
+    field_4:   v('f-mov-resp'),
+    field_5:   v('f-mov-local'),
+    field_6:   v('f-mov-sc'),
+    field_8:   v('f-mov-obs'),
   };
   try {
     await graphPost(newItemUrl(CONFIG.listMovimentos), { fields });
@@ -920,24 +978,24 @@ async function moverParaEstoque(pedidoId) {
   try {
     // Criar no estoque
     await graphPost(newItemUrl(CONFIG.listEstoque), { fields: {
-      Nome: p.Modelo || p.Title,
-      PN: p.PN || '',
-      Quantidade: Number(p.Quantidade) || 0,
-      QtdDisponivel: Number(p.Quantidade) || 0,
-      StatusEstoque: 'Disponível',
-      Origem: 'Entrega',
-      DataEntrada: new Date().toISOString(),
+      Title: p.Modelo || p.Title,
+      field_1: p.PN || '',
+      field_2: Number(p.Quantidade) || 0,
+      field_3: Number(p.Quantidade) || 0,
+      field_7: 'Disponível',
+      field_8: 'Entrega',
+      field_6: new Date().toISOString(),
     }});
     // Atualizar status do pedido
-    await graphPatch(itemUrl(CONFIG.listPedidos, pedidoId), { Status: 'Entregue', DataEntrega: new Date().toISOString() });
+    await graphPatch(itemUrl(CONFIG.listPedidos, pedidoId), { field_17: 'Entregue', field_14: new Date().toISOString() });
     // Registrar movimento
     await graphPost(newItemUrl(CONFIG.listMovimentos), { fields: {
-      Nome: p.Modelo || p.Title,
-      Modelo: p.Modelo || '',
-      Quantidade: Number(p.Quantidade) || 0,
-      Destino: 'Estoque',
-      Responsavel: currentUser?.name || '',
-      Observacoes: 'Entrada via pedido: ' + (p.Title || ''),
+      Title: p.Modelo || p.Title,
+      field_2: p.Modelo || '',
+      field_3: Number(p.Quantidade) || 0,
+      field_7: 'Estoque',
+      field_4: currentUser?.name || '',
+      field_8: 'Entrada via pedido: ' + (p.Title || ''),
     }});
     toast('Item movido para o estoque!', 'ok');
     await loadAllData();
@@ -951,15 +1009,15 @@ async function moverDoEstoque(estoqueId) {
   if (!destino) return;
   try {
     // Atualizar estoque
-    await graphPatch(itemUrl(CONFIG.listEstoque, estoqueId), { StatusEstoque: 'Movimentado' });
+    await graphPatch(itemUrl(CONFIG.listEstoque, estoqueId), { field_7: 'Movimentado' });
     // Registrar movimento
     await graphPost(newItemUrl(CONFIG.listMovimentos), { fields: {
-      Nome: e.Nome || '',
-      Modelo: e.Nome || '',
-      Quantidade: Number(e.Quantidade) || 0,
-      Destino: destino,
-      Responsavel: currentUser?.name || '',
-      Observacoes: 'Saída do estoque',
+      Title: e.Nome || '',
+      field_2: e.Nome || '',
+      field_3: Number(e.Quantidade) || 0,
+      field_7: destino,
+      field_4: currentUser?.name || '',
+      field_8: 'Saída do estoque',
     }});
     toast('Movimentação registrada!', 'ok');
     await loadAllData();
