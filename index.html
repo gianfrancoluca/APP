@@ -344,7 +344,8 @@ input, select, textarea { font-family:var(--font); }
     <button class="h-btn" onclick="openModal('estoque')">+ Estoque</button>
     <button class="h-btn" onclick="openModal('movimento')">+ Movimento</button>
     <button class="h-btn" onclick="exportExcel()">⬇ Excel</button>
-    <button class="h-btn" onclick="importarPedidos()" style="background:var(--success-light);color:var(--success);border-color:var(--success)">⬆ Importar</button>
+    <button class="h-btn" onclick="document.getElementById('fileImport').click()" style="background:var(--success-light);color:var(--success);border-color:var(--success)">⬆ Importar Excel</button>
+    <input type="file" id="fileImport" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(this)">
     <button class="h-btn" onclick="toggleTheme()">🌙</button>
     <button class="h-btn" onclick="doLogout()">Sair</button>
   </div>
@@ -1026,38 +1027,70 @@ async function moverDoEstoque(estoqueId) {
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
-// ║  IMPORTAR PEDIDOS DO JSON                                    ║
+// ║  IMPORTAR PEDIDOS DO EXCEL                                   ║
 // ╚══════════════════════════════════════════════════════════════╝
-async function importarPedidos() {
-  if (!confirm('Importar todos os pedidos do arquivo pedidos_data.json? Isso pode levar alguns minutos.')) return;
-  toast('Buscando dados...', 'warn');
-  try {
-    const r = await fetch('https://gianfrancoluca.github.io/APP/pedidos_data.json');
-    if (!r.ok) throw new Error('JSON não encontrado. Suba o pedidos_data.json no GitHub.');
-    const dados = await r.json();
-    const URL = `${graphBase}/sites/${CONFIG.siteId}/lists/${CONFIG.listPedidos}/items`;
-    let ok = 0, erros = 0;
-    const total = dados.length;
-    toast(`Importando ${total} registros...`, 'warn');
-    for (let i = 0; i < total; i++) {
-      try {
-        await getToken();
-        const x = await fetch(URL, {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
-          body: JSON.stringify(dados[i])
-        });
-        if (x.ok) ok++; else erros++;
-      } catch(e) { erros++; }
-      if (i % 100 === 0) toast(`Progresso: ${i+1}/${total} (${ok} ok, ${erros} erros)`, 'warn');
-      if (i % 5 === 0) await new Promise(r => setTimeout(r, 100));
+async function importarExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  toast('Lendo Excel...', 'warn');
+  const data = await file.arrayBuffer();
+  const wb = XLSX.read(data);
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+  if (!rows.length) { toast('Excel vazio!', 'err'); return; }
+  if (!confirm(`Importar ${rows.length} registros para GTI_Pedidos?`)) return;
+
+  // Mapeamento colunas Excel → campos internos SharePoint
+  const MAP = {
+    'Ano': (v) => ({ Title: String(v||'') }),
+    'ADC': (v) => ({ field_1: String(v||'') }),
+    'Solicitante': (v) => { const n = Number(v); return isNaN(n) ? {} : { field_2: n }; },
+    'Projeto': (v) => { const n = Number(v); return isNaN(n) ? {} : { field_3: n }; },
+    'SC': (v) => ({ field_4: String(v||'') }),
+    'Destino': (v) => ({ field_5: String(v||'') }),
+    'Modelo': (v) => ({ field_6: String(v||'') }),
+    'PN': (v) => ({ field_7: String(v||'') }),
+    'Quantidade': (v) => { const n = Number(v); return isNaN(n) ? {} : { field_8: n }; },
+    'ValorUnit': (v) => { const n = Number(v); return isNaN(n) ? {} : { field_9: n }; },
+    'ValorTotal': (v) => { const n = Number(v); return isNaN(n) ? {} : { field_10: n }; },
+    'DataPedido': (v) => v ? { field_11: String(v) } : {},
+    'DataPrevista': (v) => v ? { field_12: String(v) } : {},
+    'NotaFiscal': (v) => { const n = Number(v); return isNaN(n) ? {} : { field_13: n }; },
+    'DataEntrega': (v) => v ? { field_14: String(v) } : {},
+    'LeadTime': (v) => { const n = Number(v); return isNaN(n) ? {} : { field_15: n }; },
+    'Observacoes': (v) => v ? { field_16: String(v) } : {},
+    'Status': (v) => ({ field_17: String(v||'') }),
+  };
+
+  const URL = `${graphBase}/sites/${CONFIG.siteId}/lists/${CONFIG.listPedidos}/items`;
+  let ok = 0, erros = 0;
+  const total = rows.length;
+
+  for (let i = 0; i < total; i++) {
+    const row = rows[i];
+    let fields = {};
+    for (const [col, fn] of Object.entries(MAP)) {
+      if (row[col] !== undefined && row[col] !== '') Object.assign(fields, fn(row[col]));
     }
-    toast(`Importação concluída! ${ok} de ${total} registros.`, 'ok');
-    alert(`Importação concluída! ${ok} importados, ${erros} erros.`);
-    await loadAllData();
-  } catch(e) {
-    toast('Erro: ' + e.message, 'err');
+    try {
+      await getToken();
+      const r = await fetch(URL, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields })
+      });
+      if (r.ok) ok++; else erros++;
+    } catch(e) { erros++; }
+    if (i % 100 === 0) toast(`Importando: ${i+1}/${total} (${ok} ok, ${erros} erros)`, 'warn');
+    if (i % 5 === 0) await new Promise(r => setTimeout(r, 100));
   }
+
+  toast(`Importação concluída! ${ok} de ${total}`, ok > 0 ? 'ok' : 'err');
+  alert(`Importação concluída! ${ok} importados, ${erros} erros.`);
+  await loadAllData();
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
