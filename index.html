@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GTI — Entregas & Estoque</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-authentication-library-js/1.4.18/msal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --surface2: #f8f9fb;
+  --border: #e2e5ea;
+  --text: #1a1d23;
+  --text2: #5f6677;
+  --text3: #8b92a5;
+  --primary: #2563eb;
+  --primary-light: #dbeafe;
+  --primary-dark: #1d4ed8;
+  --success: #059669;
+  --success-light: #d1fae5;
+  --warning: #d97706;
+  --warning-light: #fef3c7;
+  --danger: #dc2626;
+  --danger-light: #fee2e2;
+  --info: #7c3aed;
+  --info-light: #ede9fe;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+  --font: 'DM Sans', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  --header-h: 56px;
+  --nav-h: 44px;
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #22252f;
+  --border: #2d3141;
+  --text: #e8eaed;
+  --text2: #9ca3b4;
+  --text3: #6b7280;
+  --primary: #3b82f6;
+  --primary-light: #1e3a5f;
+  --primary-dark: #60a5fa;
+  --success-light: #064e3b;
+  --warning-light: #78350f;
+  --danger-light: #7f1d1d;
+  --info-light: #3b1f7e;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.5);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; transition:background var(--transition), color var(--transition); }
+button { font-family:var(--font); cursor:pointer; border:none; }
+input, select, textarea { font-family:var(--font); }
+
+/* ═══ LOADING / AUTH ═══ */
+#authScreen {
+  position:fixed; inset:0; z-index:9999; background:var(--bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;
+}
+#authScreen .auth-logo { font-size:48px; font-weight:700; color:var(--primary); letter-spacing:-2px; }
+#authScreen .auth-sub { color:var(--text2); font-size:15px; }
+#authScreen .auth-btn {
+  margin-top:12px; padding:14px 36px; background:var(--primary); color:#fff;
+  border-radius:var(--radius); font-size:15px; font-weight:600;
+  transition:all var(--transition); box-shadow:var(--shadow-md);
+}
+#authScreen .auth-btn:hover { background:var(--primary-dark); transform:translateY(-1px); box-shadow:var(--shadow-lg); }
+#authScreen .auth-error { color:var(--danger); font-size:13px; max-width:400px; text-align:center; }
+
+/* ═══ CONFIG BANNER ═══ */
+.config-banner {
+  background:var(--warning-light); border:1px solid var(--warning); color:var(--text);
+  padding:12px 20px; font-size:13px; line-height:1.6; border-radius:var(--radius); margin:20px;
+}
+.config-banner code { background:rgba(0,0,0,0.1); padding:2px 6px; border-radius:4px; font-family:var(--mono); font-size:12px; }
+
+/* ═══ HEADER ═══ */
+.header {
+  height:var(--header-h); background:var(--surface); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; padding:0 20px;
+  position:sticky; top:0; z-index:100; box-shadow:var(--shadow-sm);
+}
+.h-left { display:flex; align-items:center; gap:12px; }
+.h-logo { font-size:22px; font-weight:700; color:var(--primary); letter-spacing:-1px; }
+.h-sep { width:1px; height:24px; background:var(--border); }
+.h-title { font-size:14px; font-weight:500; color:var(--text2); }
+.h-right { display:flex; align-items:center; gap:8px; }
+.h-user { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text2); }
+.h-avatar {
+  width:30px; height:30px; border-radius:50%; background:var(--primary);
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:700;
+}
+.h-btn {
+  padding:7px 14px; border-radius:var(--radius-sm); font-size:13px; font-weight:500;
+  background:var(--surface2); color:var(--text); border:1px solid var(--border);
+  transition:all var(--transition);
+}
+.h-btn:hover { background:var(--border); }
+.h-btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+.h-btn-primary:hover { background:var(--primary-dark); }
+
+/* ═══ NAV TABS ═══ */
+.nav {
+  height:var(--nav-h); background:var(--surface); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:0; padding:0 20px;
+  position:sticky; top:var(--header-h); z-index:99;
+}
+.nav-tab {
+  padding:10px 18px; font-size:13px; font-weight:500; color:var(--text3);
+  cursor:pointer; border-bottom:2px solid transparent; transition:all var(--transition);
+  display:flex; align-items:center; gap:8px;
+}
+.nav-tab:hover { color:var(--text); }
+.nav-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+.nav-badge {
+  font-size:11px; padding:1px 7px; border-radius:10px; font-weight:600;
+  background:var(--surface2); color:var(--text3);
+}
+.nav-tab.active .nav-badge { background:var(--primary-light); color:var(--primary); }
+
+/* ═══ CONTENT ═══ */
+.content { padding:20px; max-width:1400px; margin:0 auto; }
+.page { display:none; }
+.page.active { display:block; animation:fadeUp .3s ease; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+/* ═══ TOOLBAR ═══ */
+.toolbar {
+  display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;
+}
+.search-box {
+  flex:1; min-width:200px; position:relative;
+}
+.search-box input {
+  width:100%; padding:9px 12px 9px 36px; border:1px solid var(--border);
+  border-radius:var(--radius-sm); background:var(--surface); color:var(--text);
+  font-size:13px; outline:none; transition:border var(--transition);
+}
+.search-box input:focus { border-color:var(--primary); }
+.search-box::before {
+  content:"⌕"; position:absolute; left:12px; top:50%; transform:translateY(-50%);
+  color:var(--text3); font-size:15px;
+}
+.tb-select {
+  padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius-sm);
+  background:var(--surface); color:var(--text); font-size:13px; outline:none; min-width:130px;
+}
+.stat-pills { display:flex; gap:6px; margin-left:auto; }
+.pill {
+  font-size:12px; font-weight:600; padding:4px 12px; border-radius:20px;
+  display:flex; align-items:center; gap:5px;
+}
+.pill-blue { background:var(--primary-light); color:var(--primary); }
+.pill-green { background:var(--success-light); color:var(--success); }
+.pill-warn { background:var(--warning-light); color:var(--warning); }
+.pill-red { background:var(--danger-light); color:var(--danger); }
+
+/* ═══ TABLE ═══ */
+.tbl-wrap {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow-sm);
+}
+.tbl { width:100%; border-collapse:collapse; font-size:13px; }
+.tbl thead { background:var(--surface2); }
+.tbl th {
+  padding:10px 14px; text-align:left; font-weight:600; font-size:11px;
+  text-transform:uppercase; letter-spacing:0.5px; color:var(--text3);
+  border-bottom:1px solid var(--border); white-space:nowrap;
+}
+.tbl td {
+  padding:10px 14px; border-bottom:1px solid var(--border);
+  color:var(--text); vertical-align:middle;
+}
+.tbl tbody tr { transition:background var(--transition); cursor:pointer; }
+.tbl tbody tr:hover { background:var(--surface2); }
+.tbl tbody tr:last-child td { border-bottom:none; }
+
+/* ═══ STATUS BADGE ═══ */
+.st {
+  display:inline-flex; align-items:center; gap:5px; padding:3px 10px;
+  border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap;
+}
+.st-dot { width:6px; height:6px; border-radius:50%; }
+.st-entregue, .st-disponivel { background:var(--success-light); color:var(--success); }
+.st-entregue .st-dot, .st-disponivel .st-dot { background:var(--success); }
+.st-pendente, .st-reservado { background:var(--warning-light); color:var(--warning); }
+.st-pendente .st-dot, .st-reservado .st-dot { background:var(--warning); }
+.st-atrasado, .st-cancelado { background:var(--danger-light); color:var(--danger); }
+.st-atrasado .st-dot, .st-cancelado .st-dot { background:var(--danger); }
+.st-movimentado { background:var(--info-light); color:var(--info); }
+.st-movimentado .st-dot { background:var(--info); }
+
+/* ═══ CARDS (Estoque) ═══ */
+.cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px; margin-bottom:20px; }
+.card {
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  padding:16px; box-shadow:var(--shadow-sm); transition:all var(--transition);
+}
+.card:hover { box-shadow:var(--shadow-md); transform:translateY(-2px); }
+.card-label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+.card-value { font-size:28px; font-weight:700; color:var(--text); font-family:var(--mono); }
+.card-sub { font-size:12px; color:var(--text2); margin-top:4px; }
+
+/* ═══ MODAL ═══ */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200;
+  display:none; align-items:center; justify-content:center; padding:20px;
+  backdrop-filter:blur(4px);
+}
+.modal-overlay.show { display:flex; }
+.modal {
+  background:var(--surface); border-radius:var(--radius-lg); width:100%; max-width:600px;
+  max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-lg); animation:modalIn .25s ease;
+}
+@keyframes modalIn { from { opacity:0; transform:scale(0.95) translateY(10px); } }
+.modal-head {
+  padding:20px 24px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.modal-title { font-size:17px; font-weight:700; }
+.modal-close {
+  width:32px; height:32px; border-radius:50%; background:var(--surface2);
+  display:flex; align-items:center; justify-content:center; font-size:18px;
+  color:var(--text3); transition:all var(--transition);
+}
+.modal-close:hover { background:var(--border); color:var(--text); }
+.modal-body { padding:24px; }
+.modal-foot {
+  padding:16px 24px; border-top:1px solid var(--border);
+  display:flex; justify-content:flex-end; gap:10px;
+}
+
+/* ═══ FORM ═══ */
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.form-group { display:flex; flex-direction:column; gap:4px; }
+.form-group.full { grid-column:1/-1; }
+.form-label { font-size:12px; font-weight:600; color:var(--text2); }
+.form-input {
+  padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius-sm);
+  background:var(--surface); color:var(--text); font-size:13px; outline:none;
+  transition:border var(--transition);
+}
+.form-input:focus { border-color:var(--primary); }
+.form-btn {
+  padding:10px 22px; border-radius:var(--radius-sm); font-size:13px; font-weight:600;
+  transition:all var(--transition);
+}
+.form-btn-primary { background:var(--primary); color:#fff; }
+.form-btn-primary:hover { background:var(--primary-dark); }
+.form-btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+.form-btn-secondary:hover { background:var(--border); }
+
+/* ═══ ACTION BUTTONS IN TABLE ═══ */
+.act-btn {
+  padding:4px 10px; border-radius:var(--radius-sm); font-size:11px; font-weight:600;
+  transition:all var(--transition);
+}
+.act-move { background:var(--success-light); color:var(--success); }
+.act-move:hover { background:var(--success); color:#fff; }
+.act-edit { background:var(--primary-light); color:var(--primary); }
+.act-edit:hover { background:var(--primary); color:#fff; }
+.act-del { background:var(--danger-light); color:var(--danger); }
+.act-del:hover { background:var(--danger); color:#fff; }
+
+/* ═══ NOTIFY ═══ */
+.toast {
+  position:fixed; top:20px; right:20px; z-index:999; padding:12px 20px;
+  border-radius:var(--radius-sm); font-size:13px; font-weight:500; color:#fff;
+  box-shadow:var(--shadow-lg); animation:slideIn .3s ease;
+  display:none;
+}
+.toast.show { display:block; }
+.toast-ok { background:var(--success); }
+.toast-err { background:var(--danger); }
+.toast-warn { background:var(--warning); }
+@keyframes slideIn { from { opacity:0; transform:translateX(40px); } }
+
+/* ═══ EMPTY STATE ═══ */
+.empty {
+  text-align:center; padding:60px 20px; color:var(--text3);
+}
+.empty-icon { font-size:48px; margin-bottom:12px; }
+.empty-text { font-size:15px; }
+
+/* ═══ LOADING SPINNER ═══ */
+.spinner {
+  width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--primary);
+  border-radius:50%; animation:spin .6s linear infinite; display:inline-block;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width:768px) {
+  .h-title, .h-user span { display:none; }
+  .form-grid { grid-template-columns:1fr; }
+  .toolbar { flex-direction:column; align-items:stretch; }
+  .stat-pills { margin-left:0; }
+  .cards { grid-template-columns:repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ AUTH SCREEN ═══ -->
+<div id="authScreen">
+  <div class="auth-logo">GTI</div>
+  <div class="auth-sub">Entregas & Estoque — Gestão Integrada</div>
+  <button class="auth-btn" onclick="doLogin()">Entrar com Microsoft 365</button>
+  <div class="auth-error" id="authError"></div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══ HEADER ═══ -->
+<div class="header" id="appHeader" style="display:none">
+  <div class="h-left">
+    <span class="h-logo">GTI</span>
+    <span class="h-sep"></span>
+    <span class="h-title">Entregas & Estoque</span>
+  </div>
+  <div class="h-right">
+    <div class="h-user">
+      <div class="h-avatar" id="hAvatar">?</div>
+      <span id="hName"></span>
+    </div>
+    <button class="h-btn h-btn-primary" onclick="openModal('pedido')">+ Novo Pedido</button>
+    <button class="h-btn" onclick="openModal('estoque')">+ Estoque</button>
+    <button class="h-btn" onclick="openModal('movimento')">+ Movimento</button>
+    <button class="h-btn" onclick="exportExcel()">⬇ Excel</button>
+    <button class="h-btn" onclick="toggleTheme()">🌙</button>
+    <button class="h-btn" onclick="doLogout()">Sair</button>
+  </div>
+</div>
+
+<!-- ═══ NAV ═══ -->
+<div class="nav" id="appNav" style="display:none">
+  <div class="nav-tab active" data-page="entregas" onclick="setPage('entregas')">
+    📦 Entregas <span class="nav-badge" id="nb-ent">0</span>
+  </div>
+  <div class="nav-tab" data-page="estoque" onclick="setPage('estoque')">
+    🏗 Estoque <span class="nav-badge" id="nb-est">0</span>
+  </div>
+  <div class="nav-tab" data-page="movimentos" onclick="setPage('movimentos')">
+    ⇆ Movimentos <span class="nav-badge" id="nb-mov">0</span>
+  </div>
+</div>
+
+<!-- ═══ PAGES ═══ -->
+<div id="appContent" style="display:none">
+
+<!-- ── ENTREGAS ── -->
+<div class="content">
+<div class="page active" id="page-entregas">
+  <div class="toolbar">
+    <div class="search-box"><input type="text" id="srchEnt" placeholder="Buscar por título, modelo, SC, projeto..." oninput="renderEntregas()"></div>
+    <select class="tb-select" id="fAnoEnt" onchange="renderEntregas()">
+      <option value="">Todos os anos</option>
+      <option value="2026">2026</option><option value="2025">2025</option>
+      <option value="2024">2024</option><option value="2023">2023</option>
+    </select>
+    <select class="tb-select" id="fStatusEnt" onchange="renderEntregas()">
+      <option value="">Todos os status</option>
+      <option value="Pendente">Pendente</option>
+      <option value="Entregue">Entregue</option>
+      <option value="Atrasado">Atrasado</option>
+    </select>
+    <div class="stat-pills">
+      <span class="pill pill-blue" id="pTotal">0 total</span>
+      <span class="pill pill-warn" id="pPend">0 pendentes</span>
+      <span class="pill pill-green" id="pOk">0 entregues</span>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr>
+        <th>Título</th><th>Modelo</th><th>Qtd</th><th>Status</th>
+        <th>Data Pedido</th><th>Data Entrega</th><th>Responsável</th><th>Ações</th>
+      </tr></thead>
+      <tbody id="tbEnt"></tbody>
+    </table>
+  </div>
+  <div class="empty" id="emptyEnt" style="display:none">
+    <div class="empty-icon">📦</div>
+    <div class="empty-text">Nenhum pedido encontrado</div>
+  </div>
+</div>
+
+<!-- ── ESTOQUE ── -->
+<div class="page" id="page-estoque">
+  <div class="cards" id="estCards"></div>
+  <div class="toolbar">
+    <div class="search-box"><input type="text" id="srchEst" placeholder="Buscar no estoque..." oninput="renderEstoque()"></div>
+    <select class="tb-select" id="fStatusEst" onchange="renderEstoque()">
+      <option value="">Todos os status</option>
+      <option value="Disponível">Disponível</option>
+      <option value="Reservado">Reservado</option>
+      <option value="Movimentado">Movimentado</option>
+    </select>
+  </div>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr>
+        <th>Nome</th><th>PN</th><th>Qtd</th><th>Disponível</th>
+        <th>Status</th><th>Origem</th><th>Data Entrada</th><th>Ações</th>
+      </tr></thead>
+      <tbody id="tbEst"></tbody>
+    </table>
+  </div>
+  <div class="empty" id="emptyEst" style="display:none">
+    <div class="empty-icon">🏗</div>
+    <div class="empty-text">Estoque vazio</div>
+  </div>
+</div>
+
+<!-- ── MOVIMENTOS ── -->
+<div class="page" id="page-movimentos">
+  <div class="toolbar">
+    <div class="search-box"><input type="text" id="srchMov" placeholder="Buscar movimentos..." oninput="renderMovimentos()"></div>
+  </div>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr>
+        <th>Data</th><th>Nome</th><th>Modelo</th><th>Qtd</th>
+        <th>Destino</th><th>Responsável</th><th>Observações</th>
+      </tr></thead>
+      <tbody id="tbMov"></tbody>
+    </table>
+  </div>
+  <div class="empty" id="emptyMov" style="display:none">
+    <div class="empty-icon">⇆</div>
+    <div class="empty-text">Nenhum movimento registrado</div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- ═══ MODAL: NOVO PEDIDO ═══ -->
+<div class="modal-overlay" id="modal-pedido">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">Novo Pedido</span>
+      <button class="modal-close" onclick="closeModal('pedido')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full"><label class="form-label">Título</label><input class="form-input" id="f-ped-title"></div>
+        <div class="form-group"><label class="form-label">Solicitante</label><input class="form-input" id="f-ped-solic"></div>
+        <div class="form-group"><label class="form-label">Projeto</label><input class="form-input" id="f-ped-projeto"></div>
+        <div class="form-group"><label class="form-label">Modelo</label><input class="form-input" id="f-ped-modelo"></div>
+        <div class="form-group"><label class="form-label">PN</label><input class="form-input" id="f-ped-pn"></div>
+        <div class="form-group"><label class="form-label">Quantidade</label><input class="form-input" type="number" id="f-ped-qtd"></div>
+        <div class="form-group"><label class="form-label">Valor Unitário</label><input class="form-input" type="number" step="0.01" id="f-ped-vunit"></div>
+        <div class="form-group"><label class="form-label">Data Pedido</label><input class="form-input" type="date" id="f-ped-dpedido"></div>
+        <div class="form-group"><label class="form-label">Data Prevista</label><input class="form-input" type="date" id="f-ped-dprev"></div>
+        <div class="form-group"><label class="form-label">Status</label>
+          <select class="form-input" id="f-ped-status">
+            <option>Pendente</option><option>Entregue</option><option>Cancelado</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Data Entrega</label><input class="form-input" type="date" id="f-ped-dentrega"></div>
+        <div class="form-group full"><label class="form-label">Observações</label><textarea class="form-input" id="f-ped-obs" rows="2"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="form-btn form-btn-secondary" onclick="closeModal('pedido')">Cancelar</button>
+      <button class="form-btn form-btn-primary" onclick="salvarPedido()">Salvar Pedido</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: ESTOQUE ═══ -->
+<div class="modal-overlay" id="modal-estoque">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">Novo Item no Estoque</span>
+      <button class="modal-close" onclick="closeModal('estoque')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full"><label class="form-label">Nome</label><input class="form-input" id="f-est-nome"></div>
+        <div class="form-group"><label class="form-label">PN</label><input class="form-input" id="f-est-pn"></div>
+        <div class="form-group"><label class="form-label">Quantidade</label><input class="form-input" type="number" id="f-est-qtd"></div>
+        <div class="form-group"><label class="form-label">Qtd Disponível</label><input class="form-input" type="number" id="f-est-qtddisp"></div>
+        <div class="form-group"><label class="form-label">Status</label>
+          <select class="form-input" id="f-est-status">
+            <option>Disponível</option><option>Reservado</option><option>Movimentado</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Origem</label><input class="form-input" id="f-est-origem"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="form-btn form-btn-secondary" onclick="closeModal('estoque')">Cancelar</button>
+      <button class="form-btn form-btn-primary" onclick="salvarEstoque()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: MOVIMENTO ═══ -->
+<div class="modal-overlay" id="modal-movimento">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">Registrar Movimento</span>
+      <button class="modal-close" onclick="closeModal('movimento')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="f-mov-nome"></div>
+        <div class="form-group"><label class="form-label">Modelo</label><input class="form-input" id="f-mov-modelo"></div>
+        <div class="form-group"><label class="form-label">Quantidade</label><input class="form-input" type="number" id="f-mov-qtd"></div>
+        <div class="form-group"><label class="form-label">Destino</label><input class="form-input" id="f-mov-destino"></div>
+        <div class="form-group"><label class="form-label">Responsável</label><input class="form-input" id="f-mov-resp"></div>
+        <div class="form-group"><label class="form-label">Localização</label><input class="form-input" id="f-mov-local"></div>
+        <div class="form-group"><label class="form-label">SC / Referência</label><input class="form-input" id="f-mov-sc"></div>
+        <div class="form-group full"><label class="form-label">Observações</label><textarea class="form-input" id="f-mov-obs" rows="2"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="form-btn form-btn-secondary" onclick="closeModal('movimento')">Cancelar</button>
+      <button class="form-btn form-btn-primary" onclick="salvarMovimento()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  CONFIGURAÇÃO — SUBSTITUA COM SEUS VALORES                  ║
+// ╚══════════════════════════════════════════════════════════════╝
+const CONFIG = {
+  clientId:  'SEU_CLIENT_ID_AQUI',       // Application (client) ID do Entra ID
+  tenantId:  'SEU_TENANT_ID_AQUI',       // Directory (tenant) ID
+  siteId:    'SEU_SITE_ID_AQUI',         // ID do site SharePoint
+  // Nomes exatos das listas SharePoint
+  listPedidos:    'GTI_Pedidos',
+  listEstoque:    'GTI_Estoque',
+  listMovimentos: 'GTI_Movimentos',
+};
+
+const REDIRECT_URI = window.location.origin + window.location.pathname;
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  MSAL — AUTENTICAÇÃO MICROSOFT                              ║
+// ╚══════════════════════════════════════════════════════════════╝
+const msalConfig = {
+  auth: {
+    clientId: CONFIG.clientId,
+    authority: `https://login.microsoftonline.com/${CONFIG.tenantId}`,
+    redirectUri: REDIRECT_URI,
+  },
+  cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: true }
+};
+
+const msalApp = new Msal.UserAgentApplication(msalConfig);
+const loginRequest = { scopes: ['User.Read', 'Sites.ReadWrite.All'] };
+let accessToken = null;
+let currentUser = null;
+
+// State
+let pedidos = [], estoque = [], movimentos = [];
+let darkMode = false;
+let currentPage = 'entregas';
+
+// ── Auth Functions ──
+async function doLogin() {
+  try {
+    if (CONFIG.clientId === 'SEU_CLIENT_ID_AQUI') {
+      document.getElementById('authError').textContent =
+        '⚠️ Configure o CLIENT_ID e TENANT_ID no código antes de usar. Veja o README.';
+      return;
+    }
+    const resp = await msalApp.loginPopup(loginRequest);
+    currentUser = resp.account;
+    await getToken();
+    showApp();
+  } catch (e) {
+    document.getElementById('authError').textContent = 'Erro no login: ' + (e.errorMessage || e.message);
+  }
+}
+
+async function getToken() {
+  try {
+    const resp = await msalApp.acquireTokenSilent(loginRequest);
+    accessToken = resp.accessToken;
+  } catch (e) {
+    const resp = await msalApp.acquireTokenPopup(loginRequest);
+    accessToken = resp.accessToken;
+  }
+}
+
+function doLogout() {
+  msalApp.logout();
+}
+
+function showApp() {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('appHeader').style.display = 'flex';
+  document.getElementById('appNav').style.display = 'flex';
+  document.getElementById('appContent').style.display = 'block';
+  if (currentUser) {
+    const name = currentUser.name || currentUser.userName;
+    document.getElementById('hName').textContent = name;
+    document.getElementById('hAvatar').textContent = name.charAt(0).toUpperCase();
+  }
+  loadAllData();
+}
+
+// Check existing session
+if (msalApp.getAccount()) {
+  currentUser = msalApp.getAccount();
+  getToken().then(() => showApp()).catch(() => {});
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  GRAPH API — CRUD SHAREPOINT                                ║
+// ╚══════════════════════════════════════════════════════════════╝
+const graphBase = 'https://graph.microsoft.com/v1.0';
+
+async function graphGet(url) {
+  await getToken();
+  const r = await fetch(graphBase + url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!r.ok) throw new Error(`Graph GET error: ${r.status}`);
+  return r.json();
+}
+
+async function graphPost(url, body) {
+  await getToken();
+  const r = await fetch(graphBase + url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error(`Graph POST error: ${r.status}`);
+  return r.json();
+}
+
+async function graphPatch(url, body) {
+  await getToken();
+  const r = await fetch(graphBase + url, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error(`Graph PATCH error: ${r.status}`);
+  return r.json();
+}
+
+function listUrl(listName) {
+  return `/sites/${CONFIG.siteId}/lists/${listName}/items?expand=fields&$top=5000`;
+}
+
+function itemUrl(listName, itemId) {
+  return `/sites/${CONFIG.siteId}/lists/${listName}/items/${itemId}/fields`;
+}
+
+function newItemUrl(listName) {
+  return `/sites/${CONFIG.siteId}/lists/${listName}/items`;
+}
+
+// ── Load All Data ──
+async function loadAllData() {
+  toast('Carregando dados...', 'warn');
+  try {
+    const [pRes, eRes, mRes] = await Promise.all([
+      graphGet(listUrl(CONFIG.listPedidos)),
+      graphGet(listUrl(CONFIG.listEstoque)),
+      graphGet(listUrl(CONFIG.listMovimentos)),
+    ]);
+    pedidos = (pRes.value || []).map(i => ({ id: i.id, ...i.fields }));
+    estoque = (eRes.value || []).map(i => ({ id: i.id, ...i.fields }));
+    movimentos = (mRes.value || []).map(i => ({ id: i.id, ...i.fields }));
+    renderAll();
+    toast('Dados carregados!', 'ok');
+  } catch (e) {
+    toast('Erro ao carregar: ' + e.message, 'err');
+    console.error(e);
+  }
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  RENDER — ENTREGAS                                          ║
+// ╚══════════════════════════════════════════════════════════════╝
+function calcStatus(p) {
+  if (p.Status === 'Entregue' || p.Status === 'Cancelado') return p.Status;
+  if (p.DataPrevista && new Date(p.DataPrevista) < new Date()) return 'Atrasado';
+  return p.Status || 'Pendente';
+}
+
+function renderEntregas() {
+  const search = (document.getElementById('srchEnt').value || '').toLowerCase();
+  const ano = document.getElementById('fAnoEnt').value;
+  const status = document.getElementById('fStatusEnt').value;
+
+  let filtered = pedidos.map(p => ({ ...p, _status: calcStatus(p) }));
+  if (search) filtered = filtered.filter(p =>
+    [p.Title, p.Modelo, p.SC, p.Projeto, p.Solicitante].some(v => (v||'').toLowerCase().includes(search))
+  );
+  if (ano) filtered = filtered.filter(p => {
+    const d = p.DataEntrega || p.DataPedido;
+    return d && new Date(d).getFullYear().toString() === ano;
+  });
+  if (status) filtered = filtered.filter(p => p._status === status);
+
+  const total = filtered.length;
+  const pend = filtered.filter(p => p._status === 'Pendente' || p._status === 'Atrasado').length;
+  const ok = filtered.filter(p => p._status === 'Entregue').length;
+
+  document.getElementById('pTotal').textContent = total + ' total';
+  document.getElementById('pPend').textContent = pend + ' pendentes';
+  document.getElementById('pOk').textContent = ok + ' entregues';
+  document.getElementById('nb-ent').textContent = total;
+
+  const tb = document.getElementById('tbEnt');
+  const empty = document.getElementById('emptyEnt');
+
+  if (!filtered.length) {
+    tb.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tb.innerHTML = filtered.map(p => `
+    <tr>
+      <td><strong>${esc(p.Title||'')}</strong></td>
+      <td>${esc(p.Modelo||'')}</td>
+      <td>${p.Quantidade||''}</td>
+      <td>${statusBadge(p._status)}</td>
+      <td>${fmtDate(p.DataPedido)}</td>
+      <td>${fmtDate(p.DataEntrega)}</td>
+      <td>${esc(p.Responsavel||p.Solicitante||'')}</td>
+      <td>
+        ${p._status !== 'Entregue' ? `<button class="act-btn act-move" onclick="moverParaEstoque('${p.id}')">→ Estoque</button>` : ''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  RENDER — ESTOQUE                                           ║
+// ╚══════════════════════════════════════════════════════════════╝
+function renderEstoque() {
+  const search = (document.getElementById('srchEst').value || '').toLowerCase();
+  const status = document.getElementById('fStatusEst').value;
+
+  let filtered = [...estoque];
+  if (search) filtered = filtered.filter(e =>
+    [e.Nome, e.PN, e.Origem].some(v => (v||'').toLowerCase().includes(search))
+  );
+  if (status) filtered = filtered.filter(e => e.StatusEstoque === status);
+
+  document.getElementById('nb-est').textContent = filtered.length;
+
+  // Cards
+  const totalQtd = filtered.reduce((s, e) => s + (Number(e.Quantidade)||0), 0);
+  const totalDisp = filtered.reduce((s, e) => s + (Number(e.QtdDisponivel)||0), 0);
+  const modelos = [...new Set(filtered.map(e => e.Nome).filter(Boolean))].length;
+
+  document.getElementById('estCards').innerHTML = `
+    <div class="card"><div class="card-label">Total de Itens</div><div class="card-value">${filtered.length}</div></div>
+    <div class="card"><div class="card-label">Quantidade Total</div><div class="card-value">${totalQtd}</div></div>
+    <div class="card"><div class="card-label">Disponível</div><div class="card-value" style="color:var(--success)">${totalDisp}</div></div>
+    <div class="card"><div class="card-label">Modelos Distintos</div><div class="card-value">${modelos}</div></div>
+  `;
+
+  const tb = document.getElementById('tbEst');
+  const empty = document.getElementById('emptyEst');
+
+  if (!filtered.length) { tb.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  tb.innerHTML = filtered.map(e => `
+    <tr>
+      <td><strong>${esc(e.Nome||'')}</strong></td>
+      <td>${esc(e.PN||'')}</td>
+      <td>${e.Quantidade||''}</td>
+      <td>${e.QtdDisponivel||''}</td>
+      <td>${statusBadge(e.StatusEstoque||'Disponível')}</td>
+      <td>${esc(e.Origem||'')}</td>
+      <td>${fmtDate(e.DataEntrada)}</td>
+      <td>
+        <button class="act-btn act-move" onclick="moverDoEstoque('${e.id}')">⇆ Mover</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  RENDER — MOVIMENTOS                                        ║
+// ╚══════════════════════════════════════════════════════════════╝
+function renderMovimentos() {
+  const search = (document.getElementById('srchMov').value || '').toLowerCase();
+  let filtered = [...movimentos];
+  if (search) filtered = filtered.filter(m =>
+    [m.Nome, m.Modelo, m.Destino, m.Responsavel].some(v => (v||'').toLowerCase().includes(search))
+  );
+
+  filtered.sort((a, b) => new Date(b.Modified||0) - new Date(a.Modified||0));
+  document.getElementById('nb-mov').textContent = filtered.length;
+
+  const tb = document.getElementById('tbMov');
+  const empty = document.getElementById('emptyMov');
+
+  if (!filtered.length) { tb.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  tb.innerHTML = filtered.map(m => `
+    <tr>
+      <td>${fmtDate(m.Modified)}</td>
+      <td><strong>${esc(m.Nome||'')}</strong></td>
+      <td>${esc(m.Modelo||'')}</td>
+      <td>${m.Quantidade||''}</td>
+      <td>${esc(m.Destino||'')}</td>
+      <td>${esc(m.Responsavel||'')}</td>
+      <td>${esc(m.Observacoes||'')}</td>
+    </tr>
+  `).join('');
+}
+
+function renderAll() { renderEntregas(); renderEstoque(); renderMovimentos(); }
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  AÇÕES — CRIAR / MOVER                                      ║
+// ╚══════════════════════════════════════════════════════════════╝
+async function salvarPedido() {
+  const fields = {
+    Title:         v('f-ped-title'),
+    Solicitante:   v('f-ped-solic'),
+    Projeto:       v('f-ped-projeto'),
+    Modelo:        v('f-ped-modelo'),
+    PN:            v('f-ped-pn'),
+    Quantidade:    Number(v('f-ped-qtd')) || 0,
+    ValorUnit:     Number(v('f-ped-vunit')) || 0,
+    DataPedido:    v('f-ped-dpedido') || null,
+    DataPrevista:  v('f-ped-dprev') || null,
+    Status:        v('f-ped-status'),
+    DataEntrega:   v('f-ped-dentrega') || null,
+    Observacoes:   v('f-ped-obs'),
+  };
+  try {
+    await graphPost(newItemUrl(CONFIG.listPedidos), { fields });
+    toast('Pedido criado!', 'ok');
+    closeModal('pedido');
+    clearForm('f-ped');
+    await loadAllData();
+  } catch (e) { toast('Erro: ' + e.message, 'err'); }
+}
+
+async function salvarEstoque() {
+  const fields = {
+    Nome:           v('f-est-nome'),
+    PN:             v('f-est-pn'),
+    Quantidade:     Number(v('f-est-qtd')) || 0,
+    QtdDisponivel:  Number(v('f-est-qtddisp')) || 0,
+    StatusEstoque:  v('f-est-status'),
+    Origem:         v('f-est-origem'),
+    DataEntrada:    new Date().toISOString(),
+  };
+  try {
+    await graphPost(newItemUrl(CONFIG.listEstoque), { fields });
+    toast('Item adicionado ao estoque!', 'ok');
+    closeModal('estoque');
+    clearForm('f-est');
+    await loadAllData();
+  } catch (e) { toast('Erro: ' + e.message, 'err'); }
+}
+
+async function salvarMovimento() {
+  const fields = {
+    Nome:         v('f-mov-nome'),
+    Modelo:       v('f-mov-modelo'),
+    Quantidade:   Number(v('f-mov-qtd')) || 0,
+    Destino:      v('f-mov-destino'),
+    Responsavel:  v('f-mov-resp'),
+    Localizacao:  v('f-mov-local'),
+    SCReferencia: v('f-mov-sc'),
+    Observacoes:  v('f-mov-obs'),
+  };
+  try {
+    await graphPost(newItemUrl(CONFIG.listMovimentos), { fields });
+    toast('Movimento registrado!', 'ok');
+    closeModal('movimento');
+    clearForm('f-mov');
+    await loadAllData();
+  } catch (e) { toast('Erro: ' + e.message, 'err'); }
+}
+
+async function moverParaEstoque(pedidoId) {
+  const p = pedidos.find(x => x.id === pedidoId);
+  if (!p) return;
+  if (!confirm(`Mover "${p.Title || p.Modelo}" para o estoque?`)) return;
+  try {
+    // Criar no estoque
+    await graphPost(newItemUrl(CONFIG.listEstoque), { fields: {
+      Nome: p.Modelo || p.Title,
+      PN: p.PN || '',
+      Quantidade: Number(p.Quantidade) || 0,
+      QtdDisponivel: Number(p.Quantidade) || 0,
+      StatusEstoque: 'Disponível',
+      Origem: 'Entrega',
+      DataEntrada: new Date().toISOString(),
+    }});
+    // Atualizar status do pedido
+    await graphPatch(itemUrl(CONFIG.listPedidos, pedidoId), { Status: 'Entregue', DataEntrega: new Date().toISOString() });
+    // Registrar movimento
+    await graphPost(newItemUrl(CONFIG.listMovimentos), { fields: {
+      Nome: p.Modelo || p.Title,
+      Modelo: p.Modelo || '',
+      Quantidade: Number(p.Quantidade) || 0,
+      Destino: 'Estoque',
+      Responsavel: currentUser?.name || '',
+      Observacoes: 'Entrada via pedido: ' + (p.Title || ''),
+    }});
+    toast('Item movido para o estoque!', 'ok');
+    await loadAllData();
+  } catch (e) { toast('Erro: ' + e.message, 'err'); }
+}
+
+async function moverDoEstoque(estoqueId) {
+  const e = estoque.find(x => x.id === estoqueId);
+  if (!e) return;
+  const destino = prompt('Destino da movimentação:', 'Cliente');
+  if (!destino) return;
+  try {
+    // Atualizar estoque
+    await graphPatch(itemUrl(CONFIG.listEstoque, estoqueId), { StatusEstoque: 'Movimentado' });
+    // Registrar movimento
+    await graphPost(newItemUrl(CONFIG.listMovimentos), { fields: {
+      Nome: e.Nome || '',
+      Modelo: e.Nome || '',
+      Quantidade: Number(e.Quantidade) || 0,
+      Destino: destino,
+      Responsavel: currentUser?.name || '',
+      Observacoes: 'Saída do estoque',
+    }});
+    toast('Movimentação registrada!', 'ok');
+    await loadAllData();
+  } catch (e2) { toast('Erro: ' + e2.message, 'err'); }
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  EXPORT EXCEL                                                ║
+// ╚══════════════════════════════════════════════════════════════╝
+function exportExcel() {
+  const wb = XLSX.utils.book_new();
+  // Entregas
+  const wsPed = XLSX.utils.json_to_sheet(pedidos.map(p => ({
+    'TÍTULO': p.Title, 'SOLICITANTE': p.Solicitante, 'PROJETO': p.Projeto,
+    'MODELO': p.Modelo, 'PN': p.PN, 'QTD': p.Quantidade,
+    'STATUS': calcStatus(p), 'DATA PEDIDO': fmtDate(p.DataPedido),
+    'DATA ENTREGA': fmtDate(p.DataEntrega), 'OBS': p.Observacoes
+  })));
+  XLSX.utils.book_append_sheet(wb, wsPed, 'Entregas');
+  // Estoque
+  const wsEst = XLSX.utils.json_to_sheet(estoque.map(e => ({
+    'NOME': e.Nome, 'PN': e.PN, 'QTD': e.Quantidade,
+    'DISPONÍVEL': e.QtdDisponivel, 'STATUS': e.StatusEstoque,
+    'ORIGEM': e.Origem, 'DATA ENTRADA': fmtDate(e.DataEntrada)
+  })));
+  XLSX.utils.book_append_sheet(wb, wsEst, 'Estoque');
+  // Movimentos
+  const wsMov = XLSX.utils.json_to_sheet(movimentos.map(m => ({
+    'DATA': fmtDate(m.Modified), 'NOME': m.Nome, 'MODELO': m.Modelo,
+    'QTD': m.Quantidade, 'DESTINO': m.Destino, 'RESPONSÁVEL': m.Responsavel,
+    'OBS': m.Observacoes
+  })));
+  XLSX.utils.book_append_sheet(wb, wsMov, 'Movimentos');
+
+  const dt = new Date();
+  const ds = `${dt.getDate().toString().padStart(2,'0')}_${(dt.getMonth()+1).toString().padStart(2,'0')}_${dt.getFullYear()}`;
+  XLSX.writeFile(wb, `GTI_Relatorio_${ds}.xlsx`);
+  toast('Excel exportado!', 'ok');
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  HELPERS                                                     ║
+// ╚══════════════════════════════════════════════════════════════╝
+function v(id) { return (document.getElementById(id)?.value || '').trim(); }
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function fmtDate(d) {
+  if (!d) return '—';
+  try {
+    const dt = new Date(d);
+    if (isNaN(dt)) return d;
+    return dt.toLocaleDateString('pt-BR');
+  } catch { return d; }
+}
+
+function statusBadge(s) {
+  const cls = (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'');
+  return `<span class="st st-${cls}"><span class="st-dot"></span>${esc(s||'')}</span>`;
+}
+
+function setPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelector(`.nav-tab[data-page="${page}"]`).classList.add('active');
+}
+
+function openModal(type) { document.getElementById('modal-' + type).classList.add('show'); }
+function closeModal(type) { document.getElementById('modal-' + type).classList.remove('show'); }
+
+function clearForm(prefix) {
+  document.querySelectorAll(`[id^="${prefix}"]`).forEach(el => {
+    if (el.tagName === 'SELECT') el.selectedIndex = 0;
+    else el.value = '';
+  });
+}
+
+function toggleTheme() {
+  darkMode = !darkMode;
+  document.body.classList.toggle('dark', darkMode);
+}
+
+let toastTimer;
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show toast-' + (type||'ok');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('show'); });
+});
+</script>
+</body>
+</html>
