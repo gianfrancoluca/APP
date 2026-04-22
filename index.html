@@ -6,1207 +6,194 @@
 <title>GTI — Entregas & Estoque</title>
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.6.0/lib/msal-browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg: #f0f2f5;
-  --surface: #ffffff;
-  --surface2: #f8f9fb;
-  --border: #e2e5ea;
-  --text: #1a1d23;
-  --text2: #5f6677;
-  --text3: #8b92a5;
-  --primary: #2563eb;
-  --primary-light: #dbeafe;
-  --primary-dark: #1d4ed8;
-  --success: #059669;
-  --success-light: #d1fae5;
-  --warning: #d97706;
-  --warning-light: #fef3c7;
-  --danger: #dc2626;
-  --danger-light: #fee2e2;
-  --info: #7c3aed;
-  --info-light: #ede9fe;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
-  --radius: 10px;
-  --radius-sm: 6px;
-  --radius-lg: 14px;
-  --font: 'DM Sans', sans-serif;
-  --mono: 'JetBrains Mono', monospace;
-  --header-h: 56px;
-  --nav-h: 44px;
-  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.dark {
-  --bg: #0f1117;
-  --surface: #1a1d27;
-  --surface2: #22252f;
-  --border: #2d3141;
-  --text: #e8eaed;
-  --text2: #9ca3b4;
-  --text3: #6b7280;
-  --primary: #3b82f6;
-  --primary-light: #1e3a5f;
-  --primary-dark: #60a5fa;
-  --success-light: #064e3b;
-  --warning-light: #78350f;
-  --danger-light: #7f1d1d;
-  --info-light: #3b1f7e;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
-  --shadow: 0 1px 3px rgba(0,0,0,0.4);
-  --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
-  --shadow-lg: 0 10px 15px rgba(0,0,0,0.5);
-}
-
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; transition:background var(--transition), color var(--transition); }
-button { font-family:var(--font); cursor:pointer; border:none; }
-input, select, textarea { font-family:var(--font); }
-
-/* ═══ LOADING / AUTH ═══ */
-#authScreen {
-  position:fixed; inset:0; z-index:9999; background:var(--bg);
-  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;
-}
-#authScreen .auth-logo { font-size:48px; font-weight:700; color:var(--primary); letter-spacing:-2px; }
-#authScreen .auth-sub { color:var(--text2); font-size:15px; }
-#authScreen .auth-btn {
-  margin-top:12px; padding:14px 36px; background:var(--primary); color:#fff;
-  border-radius:var(--radius); font-size:15px; font-weight:600;
-  transition:all var(--transition); box-shadow:var(--shadow-md);
-}
-#authScreen .auth-btn:hover { background:var(--primary-dark); transform:translateY(-1px); box-shadow:var(--shadow-lg); }
-#authScreen .auth-error { color:var(--danger); font-size:13px; max-width:400px; text-align:center; }
-
-/* ═══ CONFIG BANNER ═══ */
-.config-banner {
-  background:var(--warning-light); border:1px solid var(--warning); color:var(--text);
-  padding:12px 20px; font-size:13px; line-height:1.6; border-radius:var(--radius); margin:20px;
-}
-.config-banner code { background:rgba(0,0,0,0.1); padding:2px 6px; border-radius:4px; font-family:var(--mono); font-size:12px; }
-
-/* ═══ HEADER ═══ */
-.header {
-  height:var(--header-h); background:var(--surface); border-bottom:1px solid var(--border);
-  display:flex; align-items:center; justify-content:space-between; padding:0 20px;
-  position:sticky; top:0; z-index:100; box-shadow:var(--shadow-sm);
-}
-.h-left { display:flex; align-items:center; gap:12px; }
-.h-logo { font-size:22px; font-weight:700; color:var(--primary); letter-spacing:-1px; }
-.h-sep { width:1px; height:24px; background:var(--border); }
-.h-title { font-size:14px; font-weight:500; color:var(--text2); }
-.h-right { display:flex; align-items:center; gap:8px; }
-.h-user { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text2); }
-.h-avatar {
-  width:30px; height:30px; border-radius:50%; background:var(--primary);
-  color:#fff; display:flex; align-items:center; justify-content:center;
-  font-size:12px; font-weight:700;
-}
-.h-btn {
-  padding:7px 14px; border-radius:var(--radius-sm); font-size:13px; font-weight:500;
-  background:var(--surface2); color:var(--text); border:1px solid var(--border);
-  transition:all var(--transition);
-}
-.h-btn:hover { background:var(--border); }
-.h-btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); }
-.h-btn-primary:hover { background:var(--primary-dark); }
-
-/* ═══ NAV TABS ═══ */
-.nav {
-  height:var(--nav-h); background:var(--surface); border-bottom:1px solid var(--border);
-  display:flex; align-items:center; gap:0; padding:0 20px;
-  position:sticky; top:var(--header-h); z-index:99;
-}
-.nav-tab {
-  padding:10px 18px; font-size:13px; font-weight:500; color:var(--text3);
-  cursor:pointer; border-bottom:2px solid transparent; transition:all var(--transition);
-  display:flex; align-items:center; gap:8px;
-}
-.nav-tab:hover { color:var(--text); }
-.nav-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
-.nav-badge {
-  font-size:11px; padding:1px 7px; border-radius:10px; font-weight:600;
-  background:var(--surface2); color:var(--text3);
-}
-.nav-tab.active .nav-badge { background:var(--primary-light); color:var(--primary); }
-
-/* ═══ CONTENT ═══ */
-.content { padding:20px; max-width:1400px; margin:0 auto; }
-.page { display:none; }
-.page.active { display:block; animation:fadeUp .3s ease; }
-@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-
-/* ═══ TOOLBAR ═══ */
-.toolbar {
-  display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;
-}
-.search-box {
-  flex:1; min-width:200px; position:relative;
-}
-.search-box input {
-  width:100%; padding:9px 12px 9px 36px; border:1px solid var(--border);
-  border-radius:var(--radius-sm); background:var(--surface); color:var(--text);
-  font-size:13px; outline:none; transition:border var(--transition);
-}
-.search-box input:focus { border-color:var(--primary); }
-.search-box::before {
-  content:"⌕"; position:absolute; left:12px; top:50%; transform:translateY(-50%);
-  color:var(--text3); font-size:15px;
-}
-.tb-select {
-  padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius-sm);
-  background:var(--surface); color:var(--text); font-size:13px; outline:none; min-width:130px;
-}
-.stat-pills { display:flex; gap:6px; margin-left:auto; }
-.pill {
-  font-size:12px; font-weight:600; padding:4px 12px; border-radius:20px;
-  display:flex; align-items:center; gap:5px;
-}
-.pill-blue { background:var(--primary-light); color:var(--primary); }
-.pill-green { background:var(--success-light); color:var(--success); }
-.pill-warn { background:var(--warning-light); color:var(--warning); }
-.pill-red { background:var(--danger-light); color:var(--danger); }
-
-/* ═══ TABLE ═══ */
-.tbl-wrap {
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow-sm);
-}
-.tbl { width:100%; border-collapse:collapse; font-size:13px; }
-.tbl thead { background:var(--surface2); }
-.tbl th {
-  padding:10px 14px; text-align:left; font-weight:600; font-size:11px;
-  text-transform:uppercase; letter-spacing:0.5px; color:var(--text3);
-  border-bottom:1px solid var(--border); white-space:nowrap;
-}
-.tbl td {
-  padding:10px 14px; border-bottom:1px solid var(--border);
-  color:var(--text); vertical-align:middle;
-}
-.tbl tbody tr { transition:background var(--transition); cursor:pointer; }
-.tbl tbody tr:hover { background:var(--surface2); }
-.tbl tbody tr:last-child td { border-bottom:none; }
-
-/* ═══ STATUS BADGE ═══ */
-.st {
-  display:inline-flex; align-items:center; gap:5px; padding:3px 10px;
-  border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap;
-}
-.st-dot { width:6px; height:6px; border-radius:50%; }
-.st-entregue, .st-disponivel { background:var(--success-light); color:var(--success); }
-.st-entregue .st-dot, .st-disponivel .st-dot { background:var(--success); }
-.st-pendente, .st-reservado { background:var(--warning-light); color:var(--warning); }
-.st-pendente .st-dot, .st-reservado .st-dot { background:var(--warning); }
-.st-atrasado, .st-cancelado { background:var(--danger-light); color:var(--danger); }
-.st-atrasado .st-dot, .st-cancelado .st-dot { background:var(--danger); }
-.st-movimentado { background:var(--info-light); color:var(--info); }
-.st-movimentado .st-dot { background:var(--info); }
-
-/* ═══ CARDS (Estoque) ═══ */
-.cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px; margin-bottom:20px; }
-.card {
-  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-  padding:16px; box-shadow:var(--shadow-sm); transition:all var(--transition);
-}
-.card:hover { box-shadow:var(--shadow-md); transform:translateY(-2px); }
-.card-label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
-.card-value { font-size:28px; font-weight:700; color:var(--text); font-family:var(--mono); }
-.card-sub { font-size:12px; color:var(--text2); margin-top:4px; }
-
-/* ═══ MODAL ═══ */
-.modal-overlay {
-  position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200;
-  display:none; align-items:center; justify-content:center; padding:20px;
-  backdrop-filter:blur(4px);
-}
-.modal-overlay.show { display:flex; }
-.modal {
-  background:var(--surface); border-radius:var(--radius-lg); width:100%; max-width:600px;
-  max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-lg); animation:modalIn .25s ease;
-}
-@keyframes modalIn { from { opacity:0; transform:scale(0.95) translateY(10px); } }
-.modal-head {
-  padding:20px 24px; border-bottom:1px solid var(--border);
-  display:flex; align-items:center; justify-content:space-between;
-}
-.modal-title { font-size:17px; font-weight:700; }
-.modal-close {
-  width:32px; height:32px; border-radius:50%; background:var(--surface2);
-  display:flex; align-items:center; justify-content:center; font-size:18px;
-  color:var(--text3); transition:all var(--transition);
-}
-.modal-close:hover { background:var(--border); color:var(--text); }
-.modal-body { padding:24px; }
-.modal-foot {
-  padding:16px 24px; border-top:1px solid var(--border);
-  display:flex; justify-content:flex-end; gap:10px;
-}
-
-/* ═══ FORM ═══ */
-.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-.form-group { display:flex; flex-direction:column; gap:4px; }
-.form-group.full { grid-column:1/-1; }
-.form-label { font-size:12px; font-weight:600; color:var(--text2); }
-.form-input {
-  padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius-sm);
-  background:var(--surface); color:var(--text); font-size:13px; outline:none;
-  transition:border var(--transition);
-}
-.form-input:focus { border-color:var(--primary); }
-.form-btn {
-  padding:10px 22px; border-radius:var(--radius-sm); font-size:13px; font-weight:600;
-  transition:all var(--transition);
-}
-.form-btn-primary { background:var(--primary); color:#fff; }
-.form-btn-primary:hover { background:var(--primary-dark); }
-.form-btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
-.form-btn-secondary:hover { background:var(--border); }
-
-/* ═══ ACTION BUTTONS IN TABLE ═══ */
-.act-btn {
-  padding:4px 10px; border-radius:var(--radius-sm); font-size:11px; font-weight:600;
-  transition:all var(--transition);
-}
-.act-move { background:var(--success-light); color:var(--success); }
-.act-move:hover { background:var(--success); color:#fff; }
-.act-edit { background:var(--primary-light); color:var(--primary); }
-.act-edit:hover { background:var(--primary); color:#fff; }
-.act-del { background:var(--danger-light); color:var(--danger); }
-.act-del:hover { background:var(--danger); color:#fff; }
-
-/* ═══ NOTIFY ═══ */
-.toast {
-  position:fixed; top:20px; right:20px; z-index:999; padding:12px 20px;
-  border-radius:var(--radius-sm); font-size:13px; font-weight:500; color:#fff;
-  box-shadow:var(--shadow-lg); animation:slideIn .3s ease;
-  display:none;
-}
-.toast.show { display:block; }
-.toast-ok { background:var(--success); }
-.toast-err { background:var(--danger); }
-.toast-warn { background:var(--warning); }
-@keyframes slideIn { from { opacity:0; transform:translateX(40px); } }
-
-/* ═══ EMPTY STATE ═══ */
-.empty {
-  text-align:center; padding:60px 20px; color:var(--text3);
-}
-.empty-icon { font-size:48px; margin-bottom:12px; }
-.empty-text { font-size:15px; }
-
-/* ═══ LOADING SPINNER ═══ */
-.spinner {
-  width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--primary);
-  border-radius:50%; animation:spin .6s linear infinite; display:inline-block;
-}
-@keyframes spin { to { transform:rotate(360deg); } }
-
-/* ═══ RESPONSIVE ═══ */
-@media (max-width:768px) {
-  .h-title, .h-user span { display:none; }
-  .form-grid { grid-template-columns:1fr; }
-  .toolbar { flex-direction:column; align-items:stretch; }
-  .stat-pills { margin-left:0; }
-  .cards { grid-template-columns:repeat(2, 1fr); }
-}
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#f8f9fc;--surface:#fff;--border:#eef0f4;--text:#1a1d23;--text2:#6b7280;--text3:#9ca3af;--indigo:#4338ca;--indigo-light:#e0e7ff;--indigo-dark:#312e81;--success:#059669;--success-light:#d1fae5;--warning:#d97706;--warning-light:#fef3c7;--danger:#dc2626;--danger-light:#fee2e2;--purple:#7c3aed;--radius:12px;--font:'DM Sans',sans-serif;--mono:'JetBrains Mono',monospace;--display:'Outfit',sans-serif}
+body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+button{font-family:var(--font);cursor:pointer;border:none;background:none}
+input,select,textarea{font-family:var(--font)}
+#authScreen{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:linear-gradient(135deg,#312e81 0%,#1e1b4b 50%,#0f0e2a 100%)}
+.auth-logo{font-family:var(--display);font-size:64px;font-weight:800;color:#fff;letter-spacing:-3px}
+.auth-sub{color:rgba(255,255,255,0.6);font-size:15px}
+.auth-btn{margin-top:16px;padding:14px 40px;background:#fff;color:var(--indigo-dark);border-radius:var(--radius);font-size:15px;font-weight:700;transition:all .2s;box-shadow:0 4px 20px rgba(0,0,0,0.2)}
+.auth-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,0.3)}
+.auth-error{color:#fca5a5;font-size:13px;max-width:400px;text-align:center}
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:260px;flex-shrink:0;background:linear-gradient(180deg,#312e81 0%,#1e1b4b 100%);display:flex;flex-direction:column;transition:width .3s}
+.sidebar.collapsed{width:72px}
+.sb-header{padding:20px;display:flex;align-items:center;gap:12px}
+.sb-logo{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--display);font-weight:800;font-size:18px;flex-shrink:0}
+.sb-brand h2{color:#fff;font-family:var(--display);font-size:17px;font-weight:700}
+.sb-brand p{color:rgba(165,160,255,0.7);font-size:11px}
+.collapsed .sb-brand,.collapsed .sb-label,.collapsed .sb-badge,.collapsed .sb-userinfo{display:none}
+.sb-nav{flex:1;padding:0 12px;margin-top:8px}
+.sb-item{width:100%;display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;font-size:13px;font-weight:500;color:rgba(199,195,255,0.7);transition:all .2s;margin-bottom:2px}
+.sb-item:hover{background:rgba(255,255,255,0.08);color:#fff}
+.sb-item.active{background:#fff;color:var(--indigo);box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+.sb-item svg{width:18px;height:18px;flex-shrink:0}
+.sb-item .sb-label{flex:1;text-align:left}
+.sb-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,0.15);color:#fff}
+.sb-item.active .sb-badge{background:var(--indigo-light);color:var(--indigo)}
+.sb-user{padding:16px;margin:12px;border-radius:12px;background:rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px}
+.sb-avatar{width:36px;height:36px;border-radius:50%;background:rgba(129,120,255,0.5);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0}
+.sb-userinfo p{color:#fff;font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-userinfo span{color:rgba(165,160,255,0.6);font-size:11px}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:60px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0}
+.topbar-left{display:flex;align-items:center;gap:16px}
+.tb-toggle{color:var(--text3);padding:4px}.tb-toggle:hover{color:var(--text)}
+.tb-search{position:relative}
+.tb-search input{width:280px;padding:8px 12px 8px 36px;background:var(--bg);border:1px solid transparent;border-radius:10px;font-size:13px;color:var(--text);outline:none;transition:all .2s}
+.tb-search input:focus{border-color:var(--indigo);background:#fff;box-shadow:0 0 0 3px rgba(67,56,202,0.08)}
+.tb-search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text3);width:15px;height:15px}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.tb-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--bg);border-radius:10px;font-size:12px;font-weight:500;color:var(--text2);transition:all .2s}
+.tb-btn:hover{background:var(--border);color:var(--text)}
+.tb-btn svg{width:15px;height:15px}
+.tb-btn-primary{background:var(--indigo);color:#fff}.tb-btn-primary:hover{background:var(--indigo-dark)}
+.content{flex:1;overflow-y:auto;padding:24px}
+.page{display:none}.page.active{display:block;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px}
+.kpi{background:var(--surface);border-radius:var(--radius);padding:18px;border:1px solid var(--border);border-left:4px solid var(--indigo);transition:all .2s}
+.kpi:hover{box-shadow:0 4px 12px rgba(0,0,0,0.06);transform:translateY(-2px)}
+.kpi-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.kpi-value{font-size:30px;font-weight:700;color:var(--text);font-family:var(--mono);margin-top:4px}
+.kpi-sub{font-size:11px;color:var(--text3);margin-top:4px}
+.chart-grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:20px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.chart-title{font-size:14px;font-weight:700;color:var(--text)}
+.chart-sub{font-size:11px;color:var(--text3);margin-top:2px;margin-bottom:12px}
+.tbl-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:var(--bg)}
+.tbl td{padding:10px 16px;border-bottom:1px solid #f5f5f8;vertical-align:middle}
+.tbl tbody tr{transition:background .15s}.tbl tbody tr:hover{background:rgba(67,56,202,0.03)}
+.tbl tbody tr:last-child td{border-bottom:none}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid}
+.badge-dot{width:6px;height:6px;border-radius:50%}
+.b-entregue,.b-disponivel,.b-entrada{background:#d1fae5;color:#059669;border-color:#a7f3d0}.b-entregue .badge-dot,.b-disponivel .badge-dot,.b-entrada .badge-dot{background:#059669}
+.b-pendente,.b-reservado{background:#fef3c7;color:#d97706;border-color:#fde68a}.b-pendente .badge-dot,.b-reservado .badge-dot{background:#d97706}
+.b-atrasado,.b-cancelado{background:#fee2e2;color:#dc2626;border-color:#fecaca}.b-atrasado .badge-dot,.b-cancelado .badge-dot{background:#dc2626}
+.b-movimentado,.b-saida{background:#e0e7ff;color:#4338ca;border-color:#c7d2fe}.b-movimentado .badge-dot,.b-saida .badge-dot{background:#4338ca}
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.toolbar-search{flex:1;min-width:200px;position:relative}
+.toolbar-search input{width:100%;padding:9px 12px 9px 36px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-size:13px;outline:none;transition:border .2s}
+.toolbar-search input:focus{border-color:var(--indigo)}
+.toolbar-search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text3);width:15px;height:15px}
+.toolbar select{padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text2);font-size:13px;outline:none}
+.pill{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px}.pill-indigo{background:var(--indigo-light);color:var(--indigo)}
+.act{padding:5px 12px;border-radius:8px;font-size:11px;font-weight:600;transition:all .15s}
+.act-green{background:#d1fae5;color:#059669}.act-green:hover{background:#059669;color:#fff}
+.act-indigo{background:#e0e7ff;color:#4338ca}.act-indigo:hover{background:#4338ca;color:#fff}
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.sec-title{font-family:var(--display);font-size:22px;font-weight:700;color:var(--text)}
+.sec-sub{font-size:13px;color:var(--text3);margin-top:2px}
+.mini-list{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.mini-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.mini-card h4{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px}
+.mini-item{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;transition:background .15s;margin-bottom:2px}
+.mini-item:hover{background:var(--bg)}
+.mini-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.mini-info{flex:1;min-width:0}
+.mini-info p{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini-info span{font-size:11px;color:var(--text3)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-bg.show{display:flex}
+.modal{background:var(--surface);border-radius:16px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 40px rgba(0,0,0,0.15)}
+.modal-head{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-family:var(--display);font-size:17px;font-weight:700}
+.modal-close{width:32px;height:32px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:18px;transition:all .2s}.modal-close:hover{background:var(--border);color:var(--text)}
+.modal-body{padding:24px}.modal-foot{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{display:flex;flex-direction:column;gap:4px}.form-group.full{grid-column:1/-1}
+.form-group label{font-size:11px;font-weight:600;color:var(--text2)}
+.form-group input,.form-group select,.form-group textarea{padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);outline:none;background:var(--surface);transition:border .2s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--indigo)}
+.btn{padding:10px 22px;border-radius:10px;font-size:13px;font-weight:600;transition:all .2s}
+.btn-primary{background:var(--indigo);color:#fff}.btn-primary:hover{background:var(--indigo-dark)}
+.btn-ghost{background:var(--bg);color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{background:var(--border)}
+.toast{position:fixed;top:20px;right:20px;z-index:999;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,0.15);display:none}
+.toast.show{display:block;animation:slideIn .3s ease}
+.toast-ok{background:var(--success)}.toast-err{background:var(--danger)}.toast-warn{background:var(--warning)}
+@keyframes slideIn{from{opacity:0;transform:translateX(40px)}}
+@media(max-width:768px){.sidebar{position:fixed;z-index:150;left:-260px;transition:left .3s}.sidebar.mobile-open{left:0}.chart-grid,.mini-list{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.form-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-
-<!-- ═══ AUTH SCREEN ═══ -->
-<div id="authScreen">
-  <div class="auth-logo">GTI</div>
-  <div class="auth-sub">Entregas & Estoque — Gestão Integrada</div>
-  <button class="auth-btn" onclick="doLogin()">Entrar com Microsoft 365</button>
-  <div class="auth-error" id="authError"></div>
-</div>
-
-<!-- ═══ TOAST ═══ -->
+<div id="authScreen"><div class="auth-logo">GTI</div><div class="auth-sub">Entregas & Estoque — Gestão Integrada</div><button class="auth-btn" onclick="doLogin()">Entrar com Microsoft 365</button><div class="auth-error" id="authError"></div></div>
 <div class="toast" id="toast"></div>
-
-<!-- ═══ HEADER ═══ -->
-<div class="header" id="appHeader" style="display:none">
-  <div class="h-left">
-    <span class="h-logo">GTI</span>
-    <span class="h-sep"></span>
-    <span class="h-title">Entregas & Estoque</span>
-  </div>
-  <div class="h-right">
-    <div class="h-user">
-      <div class="h-avatar" id="hAvatar">?</div>
-      <span id="hName"></span>
-    </div>
-    <button class="h-btn h-btn-primary" onclick="openModal('pedido')">+ Novo Pedido</button>
-    <button class="h-btn" onclick="openModal('estoque')">+ Estoque</button>
-    <button class="h-btn" onclick="openModal('movimento')">+ Movimento</button>
-    <button class="h-btn" onclick="exportExcel()">⬇ Excel</button>
-    <button class="h-btn" onclick="document.getElementById('fileImport').click()" style="background:var(--success-light);color:var(--success);border-color:var(--success)">⬆ Importar Excel</button>
-    <input type="file" id="fileImport" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(this)">
-    <button class="h-btn" onclick="toggleTheme()">🌙</button>
-    <button class="h-btn" onclick="doLogout()">Sair</button>
-  </div>
-</div>
-
-<!-- ═══ NAV ═══ -->
-<div class="nav" id="appNav" style="display:none">
-  <div class="nav-tab active" data-page="entregas" onclick="setPage('entregas')">
-    📦 Entregas <span class="nav-badge" id="nb-ent">0</span>
-  </div>
-  <div class="nav-tab" data-page="estoque" onclick="setPage('estoque')">
-    🏗 Estoque <span class="nav-badge" id="nb-est">0</span>
-  </div>
-  <div class="nav-tab" data-page="movimentos" onclick="setPage('movimentos')">
-    ⇆ Movimentos <span class="nav-badge" id="nb-mov">0</span>
-  </div>
-</div>
-
-<!-- ═══ PAGES ═══ -->
-<div id="appContent" style="display:none">
-
-<!-- ── ENTREGAS ── -->
+<div class="app" id="appWrap" style="display:none">
+<aside class="sidebar" id="sidebar"><div class="sb-header"><div class="sb-logo">G</div><div class="sb-brand"><h2>GTI</h2><p>Entregas & Estoque</p></div></div>
+<nav class="sb-nav">
+<button class="sb-item active" data-page="dashboard" onclick="setPage('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="sb-label">Dashboard</span></button>
+<button class="sb-item" data-page="entregas" onclick="setPage('entregas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg><span class="sb-label">Entregas</span><span class="sb-badge" id="nb-ent">0</span></button>
+<button class="sb-item" data-page="estoque" onclick="setPage('estoque')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg><span class="sb-label">Estoque</span><span class="sb-badge" id="nb-est">0</span></button>
+<button class="sb-item" data-page="movimentos" onclick="setPage('movimentos')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3l4 4-4 4M16 21l-4-4 4-4"/><path d="M12 7h8M4 17h8"/></svg><span class="sb-label">Movimentos</span><span class="sb-badge" id="nb-mov">0</span></button>
+</nav>
+<div class="sb-user"><div class="sb-avatar" id="sbAvatar">?</div><div class="sb-userinfo"><p id="sbName">Usuário</p><span>GTI · RNP</span></div></div></aside>
+<div class="main"><header class="topbar"><div class="topbar-left"><button class="tb-toggle" onclick="toggleSidebar()"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button><div class="tb-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input placeholder="Busca rápida..."></div></div>
+<div class="topbar-right"><button class="tb-btn" onclick="exportExcel()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Exportar</button><button class="tb-btn" onclick="document.getElementById('fileImport').click()" style="background:#d1fae5;color:#059669"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Importar</button><input type="file" id="fileImport" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(this)"><button class="tb-btn" onclick="doLogout()">Sair</button></div></header>
 <div class="content">
-<div class="page active" id="page-entregas">
-  <div class="toolbar">
-    <div class="search-box"><input type="text" id="srchEnt" placeholder="Buscar por título, modelo, SC, projeto..." oninput="renderEntregas()"></div>
-    <select class="tb-select" id="fAnoEnt" onchange="renderEntregas()">
-      <option value="">Todos os anos</option>
-      <option value="2026">2026</option><option value="2025">2025</option>
-      <option value="2024">2024</option><option value="2023">2023</option>
-    </select>
-    <select class="tb-select" id="fStatusEnt" onchange="renderEntregas()">
-      <option value="">Todos os status</option>
-      <option value="Pendente">Pendente</option>
-      <option value="Entregue">Entregue</option>
-      <option value="Atrasado">Atrasado</option>
-    </select>
-    <div class="stat-pills">
-      <span class="pill pill-blue" id="pTotal">0 total</span>
-      <span class="pill pill-warn" id="pPend">0 pendentes</span>
-      <span class="pill pill-green" id="pOk">0 entregues</span>
-    </div>
-  </div>
-  <div class="tbl-wrap">
-    <table class="tbl">
-      <thead><tr>
-        <th>Título</th><th>Modelo</th><th>Qtd</th><th>Status</th>
-        <th>Data Pedido</th><th>Data Entrega</th><th>Responsável</th><th>Ações</th>
-      </tr></thead>
-      <tbody id="tbEnt"></tbody>
-    </table>
-  </div>
-  <div class="empty" id="emptyEnt" style="display:none">
-    <div class="empty-icon">📦</div>
-    <div class="empty-text">Nenhum pedido encontrado</div>
-  </div>
-</div>
-
-<!-- ── ESTOQUE ── -->
-<div class="page" id="page-estoque">
-  <div class="cards" id="estCards"></div>
-  <div class="toolbar">
-    <div class="search-box"><input type="text" id="srchEst" placeholder="Buscar no estoque..." oninput="renderEstoque()"></div>
-    <select class="tb-select" id="fStatusEst" onchange="renderEstoque()">
-      <option value="">Todos os status</option>
-      <option value="Disponível">Disponível</option>
-      <option value="Reservado">Reservado</option>
-      <option value="Movimentado">Movimentado</option>
-    </select>
-  </div>
-  <div class="tbl-wrap">
-    <table class="tbl">
-      <thead><tr>
-        <th>Nome</th><th>PN</th><th>Qtd</th><th>Disponível</th>
-        <th>Status</th><th>Origem</th><th>Data Entrada</th><th>Ações</th>
-      </tr></thead>
-      <tbody id="tbEst"></tbody>
-    </table>
-  </div>
-  <div class="empty" id="emptyEst" style="display:none">
-    <div class="empty-icon">🏗</div>
-    <div class="empty-text">Estoque vazio</div>
-  </div>
-</div>
-
-<!-- ── MOVIMENTOS ── -->
-<div class="page" id="page-movimentos">
-  <div class="toolbar">
-    <div class="search-box"><input type="text" id="srchMov" placeholder="Buscar movimentos..." oninput="renderMovimentos()"></div>
-  </div>
-  <div class="tbl-wrap">
-    <table class="tbl">
-      <thead><tr>
-        <th>Data</th><th>Nome</th><th>Modelo</th><th>Qtd</th>
-        <th>Destino</th><th>Responsável</th><th>Observações</th>
-      </tr></thead>
-      <tbody id="tbMov"></tbody>
-    </table>
-  </div>
-  <div class="empty" id="emptyMov" style="display:none">
-    <div class="empty-icon">⇆</div>
-    <div class="empty-text">Nenhum movimento registrado</div>
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══ MODAL: NOVO PEDIDO ═══ -->
-<div class="modal-overlay" id="modal-pedido">
-  <div class="modal">
-    <div class="modal-head">
-      <span class="modal-title">Novo Pedido</span>
-      <button class="modal-close" onclick="closeModal('pedido')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-group full"><label class="form-label">Título</label><input class="form-input" id="f-ped-title"></div>
-        <div class="form-group"><label class="form-label">Solicitante</label><input class="form-input" id="f-ped-solic"></div>
-        <div class="form-group"><label class="form-label">Projeto</label><input class="form-input" id="f-ped-projeto"></div>
-        <div class="form-group"><label class="form-label">Modelo</label><input class="form-input" id="f-ped-modelo"></div>
-        <div class="form-group"><label class="form-label">PN</label><input class="form-input" id="f-ped-pn"></div>
-        <div class="form-group"><label class="form-label">Quantidade</label><input class="form-input" type="number" id="f-ped-qtd"></div>
-        <div class="form-group"><label class="form-label">Valor Unitário</label><input class="form-input" type="number" step="0.01" id="f-ped-vunit"></div>
-        <div class="form-group"><label class="form-label">Data Pedido</label><input class="form-input" type="date" id="f-ped-dpedido"></div>
-        <div class="form-group"><label class="form-label">Data Prevista</label><input class="form-input" type="date" id="f-ped-dprev"></div>
-        <div class="form-group"><label class="form-label">Status</label>
-          <select class="form-input" id="f-ped-status">
-            <option>Pendente</option><option>Entregue</option><option>Cancelado</option>
-          </select>
-        </div>
-        <div class="form-group"><label class="form-label">Data Entrega</label><input class="form-input" type="date" id="f-ped-dentrega"></div>
-        <div class="form-group full"><label class="form-label">Observações</label><textarea class="form-input" id="f-ped-obs" rows="2"></textarea></div>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="form-btn form-btn-secondary" onclick="closeModal('pedido')">Cancelar</button>
-      <button class="form-btn form-btn-primary" onclick="salvarPedido()">Salvar Pedido</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ MODAL: ESTOQUE ═══ -->
-<div class="modal-overlay" id="modal-estoque">
-  <div class="modal">
-    <div class="modal-head">
-      <span class="modal-title">Novo Item no Estoque</span>
-      <button class="modal-close" onclick="closeModal('estoque')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-group full"><label class="form-label">Nome</label><input class="form-input" id="f-est-nome"></div>
-        <div class="form-group"><label class="form-label">PN</label><input class="form-input" id="f-est-pn"></div>
-        <div class="form-group"><label class="form-label">Quantidade</label><input class="form-input" type="number" id="f-est-qtd"></div>
-        <div class="form-group"><label class="form-label">Qtd Disponível</label><input class="form-input" type="number" id="f-est-qtddisp"></div>
-        <div class="form-group"><label class="form-label">Status</label>
-          <select class="form-input" id="f-est-status">
-            <option>Disponível</option><option>Reservado</option><option>Movimentado</option>
-          </select>
-        </div>
-        <div class="form-group"><label class="form-label">Origem</label><input class="form-input" id="f-est-origem"></div>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="form-btn form-btn-secondary" onclick="closeModal('estoque')">Cancelar</button>
-      <button class="form-btn form-btn-primary" onclick="salvarEstoque()">Salvar</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ MODAL: MOVIMENTO ═══ -->
-<div class="modal-overlay" id="modal-movimento">
-  <div class="modal">
-    <div class="modal-head">
-      <span class="modal-title">Registrar Movimento</span>
-      <button class="modal-close" onclick="closeModal('movimento')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="f-mov-nome"></div>
-        <div class="form-group"><label class="form-label">Modelo</label><input class="form-input" id="f-mov-modelo"></div>
-        <div class="form-group"><label class="form-label">Quantidade</label><input class="form-input" type="number" id="f-mov-qtd"></div>
-        <div class="form-group"><label class="form-label">Destino</label><input class="form-input" id="f-mov-destino"></div>
-        <div class="form-group"><label class="form-label">Responsável</label><input class="form-input" id="f-mov-resp"></div>
-        <div class="form-group"><label class="form-label">Localização</label><input class="form-input" id="f-mov-local"></div>
-        <div class="form-group"><label class="form-label">SC / Referência</label><input class="form-input" id="f-mov-sc"></div>
-        <div class="form-group full"><label class="form-label">Observações</label><textarea class="form-input" id="f-mov-obs" rows="2"></textarea></div>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="form-btn form-btn-secondary" onclick="closeModal('movimento')">Cancelar</button>
-      <button class="form-btn form-btn-primary" onclick="salvarMovimento()">Registrar</button>
-    </div>
-  </div>
-</div>
-
+<div class="page active" id="page-dashboard"><div class="sec-header"><div><div class="sec-title">Dashboard</div><div class="sec-sub">Visão geral das operações GTI</div></div></div><div class="kpis" id="dashKpis"></div><div class="chart-grid"><div class="chart-card"><div class="chart-title">Entregas por Status</div><div class="chart-sub">Distribuição atual</div><canvas id="chartBar" height="220"></canvas></div><div class="chart-card"><div class="chart-title">Por Categoria</div><div class="chart-sub">Equipamentos em estoque</div><canvas id="chartPie" height="220"></canvas></div></div><div class="mini-list"><div class="mini-card"><h4>Pedidos Recentes</h4><div id="miniPedidos"></div></div><div class="mini-card"><h4>Últimos Movimentos</h4><div id="miniMov"></div></div></div></div>
+<div class="page" id="page-entregas"><div class="sec-header"><div><div class="sec-title">Entregas</div><div class="sec-sub">Gestão de pedidos de equipamentos</div></div><button class="tb-btn tb-btn-primary" onclick="openModal('pedido')">+ Novo Pedido</button></div><div class="toolbar"><div class="toolbar-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input placeholder="Buscar..." id="srchEnt" oninput="renderEntregas()"></div><select id="fAnoEnt" onchange="renderEntregas()"><option value="">Todos os anos</option><option value="2026">2026</option><option value="2025">2025</option><option value="2024">2024</option></select><select id="fStatusEnt" onchange="renderEntregas()"><option value="">Todos os status</option><option>Pendente</option><option>Entregue</option><option>Atrasado</option></select><span class="pill pill-indigo" id="pTotal">0</span></div><div class="tbl-card"><table class="tbl"><thead><tr><th>ADC</th><th>Modelo</th><th>Qtd</th><th>Status</th><th>Data Pedido</th><th>Entrega</th><th>Destino</th><th></th></tr></thead><tbody id="tbEnt"></tbody></table></div></div>
+<div class="page" id="page-estoque"><div class="sec-header"><div><div class="sec-title">Estoque</div><div class="sec-sub">Controle de equipamentos</div></div><button class="tb-btn tb-btn-primary" onclick="openModal('estoque')">+ Adicionar</button></div><div class="kpis" id="estKpis"></div><div class="chart-card" style="margin-bottom:16px"><div class="chart-title">Disponibilidade</div><div class="chart-sub">Total vs Disponível</div><canvas id="chartEstoque" height="200"></canvas></div><div class="tbl-card"><table class="tbl"><thead><tr><th>Nome</th><th>PN</th><th>Total</th><th>Disp</th><th>Status</th><th>Origem</th><th>Data</th><th></th></tr></thead><tbody id="tbEst"></tbody></table></div></div>
+<div class="page" id="page-movimentos"><div class="sec-header"><div><div class="sec-title">Movimentos</div><div class="sec-sub">Histórico de movimentações</div></div><button class="tb-btn tb-btn-primary" onclick="openModal('movimento')">+ Registrar</button></div><div class="kpis" id="movKpis"></div><div class="tbl-card"><table class="tbl"><thead><tr><th>Data</th><th>Equipamento</th><th>Qtd</th><th>Tipo</th><th>Destino</th><th>Responsável</th><th>Obs</th></tr></thead><tbody id="tbMov"></tbody></table></div></div>
+</div></div></div>
+<div class="modal-bg" id="modal-pedido"><div class="modal"><div class="modal-head"><h3>Novo Pedido</h3><button class="modal-close" onclick="closeModal('pedido')">✕</button></div><div class="modal-body"><div class="form-grid"><div class="form-group full"><label>Título</label><input id="f-ped-title"></div><div class="form-group"><label>Solicitante</label><input id="f-ped-solic"></div><div class="form-group"><label>Projeto</label><input id="f-ped-projeto"></div><div class="form-group"><label>Modelo</label><input id="f-ped-modelo"></div><div class="form-group"><label>PN</label><input id="f-ped-pn"></div><div class="form-group"><label>Quantidade</label><input type="number" id="f-ped-qtd"></div><div class="form-group"><label>Valor Unit</label><input type="number" step="0.01" id="f-ped-vunit"></div><div class="form-group"><label>Data Pedido</label><input type="date" id="f-ped-dpedido"></div><div class="form-group"><label>Data Prevista</label><input type="date" id="f-ped-dprev"></div><div class="form-group"><label>Status</label><select id="f-ped-status"><option>Pendente</option><option>Entregue</option><option>Cancelado</option></select></div><div class="form-group"><label>Data Entrega</label><input type="date" id="f-ped-dentrega"></div><div class="form-group full"><label>Obs</label><textarea id="f-ped-obs" rows="2"></textarea></div></div></div><div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal('pedido')">Cancelar</button><button class="btn btn-primary" onclick="salvarPedido()">Salvar</button></div></div></div>
+<div class="modal-bg" id="modal-estoque"><div class="modal"><div class="modal-head"><h3>Novo Item</h3><button class="modal-close" onclick="closeModal('estoque')">✕</button></div><div class="modal-body"><div class="form-grid"><div class="form-group full"><label>Nome</label><input id="f-est-nome"></div><div class="form-group"><label>PN</label><input id="f-est-pn"></div><div class="form-group"><label>Qtd</label><input type="number" id="f-est-qtd"></div><div class="form-group"><label>Disponível</label><input type="number" id="f-est-qtddisp"></div><div class="form-group"><label>Status</label><select id="f-est-status"><option>Disponível</option><option>Reservado</option><option>Movimentado</option></select></div><div class="form-group"><label>Origem</label><input id="f-est-origem"></div></div></div><div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal('estoque')">Cancelar</button><button class="btn btn-primary" onclick="salvarEstoque()">Salvar</button></div></div></div>
+<div class="modal-bg" id="modal-movimento"><div class="modal"><div class="modal-head"><h3>Registrar Movimento</h3><button class="modal-close" onclick="closeModal('movimento')">✕</button></div><div class="modal-body"><div class="form-grid"><div class="form-group"><label>Nome</label><input id="f-mov-nome"></div><div class="form-group"><label>Modelo</label><input id="f-mov-modelo"></div><div class="form-group"><label>Qtd</label><input type="number" id="f-mov-qtd"></div><div class="form-group"><label>Destino</label><input id="f-mov-destino"></div><div class="form-group"><label>Responsável</label><input id="f-mov-resp"></div><div class="form-group"><label>Localização</label><input id="f-mov-local"></div><div class="form-group"><label>SC/Ref</label><input id="f-mov-sc"></div><div class="form-group full"><label>Obs</label><textarea id="f-mov-obs" rows="2"></textarea></div></div></div><div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal('movimento')">Cancelar</button><button class="btn btn-primary" onclick="salvarMovimento()">Registrar</button></div></div></div>
 <script>
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  CONFIGURAÇÃO — SUBSTITUA COM SEUS VALORES                  ║
-// ╚══════════════════════════════════════════════════════════════╝
-const CONFIG = {
-  clientId:  '77560595-75a5-4ad0-a946-8574548c64cb',
-  tenantId:  'd64646e6-e0d7-4f85-b443-6170dfec0af4',
-  siteId:    'nasnuvensrnp.sharepoint.com,4584015d-88fd-4bc7-9f07-50ab167f590d,cc96f366-0544-4459-ac49-73b7f29d9c49',
-  // Nomes exatos das listas SharePoint
-  listPedidos:    'GTI_Pedidos',
-  listEstoque:    'GTI_Estoque',
-  listMovimentos: 'GTI_Movimentos',
-};
-
-const REDIRECT_URI = window.location.origin + window.location.pathname;
-
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  MSAL — AUTENTICAÇÃO MICROSOFT                              ║
-// ╚══════════════════════════════════════════════════════════════╝
-const msalConfig = {
-  auth: {
-    clientId: CONFIG.clientId,
-    authority: `https://login.microsoftonline.com/${CONFIG.tenantId}`,
-    redirectUri: REDIRECT_URI,
-  },
-  cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: true }
-};
-
-const loginRequest = { scopes: ['User.Read', 'Sites.ReadWrite.All'] };
-let accessToken = null;
-let currentUser = null;
-let msalApp = null;
-
-// State
-let pedidos = [], estoque = [], movimentos = [];
-let darkMode = false;
-let currentPage = 'entregas';
-
-// ── Init MSAL ──
-async function initMsal() {
-  msalApp = new msal.PublicClientApplication(msalConfig);
-  await msalApp.initialize();
-  const accounts = msalApp.getAllAccounts();
-  if (accounts.length > 0) {
-    currentUser = accounts[0];
-    try {
-      await getToken();
-      showApp();
-    } catch(e) { console.log('Silent login failed'); }
-  }
-}
-
-// ── Auth Functions ──
-async function doLogin() {
-  try {
-    if (CONFIG.clientId === 'SEU_CLIENT_ID_AQUI') {
-      document.getElementById('authError').textContent =
-        '⚠️ Configure o CLIENT_ID e TENANT_ID no código antes de usar. Veja o README.';
-      return;
-    }
-    if (!msalApp) await initMsal();
-    const resp = await msalApp.loginPopup(loginRequest);
-    currentUser = resp.account;
-    await getToken();
-    showApp();
-  } catch (e) {
-    document.getElementById('authError').textContent = 'Erro no login: ' + (e.errorMessage || e.message);
-  }
-}
-
-async function getToken() {
-  try {
-    const accounts = msalApp.getAllAccounts();
-    if (!accounts.length) throw new Error('No account');
-    const resp = await msalApp.acquireTokenSilent({ ...loginRequest, account: accounts[0] });
-    accessToken = resp.accessToken;
-    return accessToken;
-  } catch (e) {
-    try {
-      const resp = await msalApp.acquireTokenPopup(loginRequest);
-      accessToken = resp.accessToken;
-      return accessToken;
-    } catch(e2) {
-      console.error('Token error:', e2);
-      return accessToken;
-    }
-  }
-}
-
-function doLogout() {
-  msalApp.logoutPopup();
-}
-
-function showApp() {
-  document.getElementById('authScreen').style.display = 'none';
-  document.getElementById('appHeader').style.display = 'flex';
-  document.getElementById('appNav').style.display = 'flex';
-  document.getElementById('appContent').style.display = 'block';
-  if (currentUser) {
-    const name = currentUser.name || currentUser.userName;
-    document.getElementById('hName').textContent = name;
-    document.getElementById('hAvatar').textContent = name.charAt(0).toUpperCase();
-  }
-  loadAllData();
-}
-
-// Init MSAL on load
-initMsal().catch(e => console.log('MSAL init:', e));
-
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  GRAPH API — CRUD SHAREPOINT                                ║
-// ╚══════════════════════════════════════════════════════════════╝
-const graphBase = 'https://graph.microsoft.com/v1.0';
-
-async function graphGet(url) {
-  await getToken();
-  const r = await fetch(graphBase + url, { headers: { Authorization: `Bearer ${accessToken}` } });
-  if (!r.ok) throw new Error(`Graph GET error: ${r.status}`);
-  return r.json();
-}
-
-async function graphPost(url, body) {
-  await getToken();
-  const r = await fetch(graphBase + url, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  if (!r.ok) throw new Error(`Graph POST error: ${r.status}`);
-  return r.json();
-}
-
-async function graphPatch(url, body) {
-  await getToken();
-  const r = await fetch(graphBase + url, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  if (!r.ok) throw new Error(`Graph PATCH error: ${r.status}`);
-  return r.json();
-}
-
-function listUrl(listName) {
-  return `/sites/${CONFIG.siteId}/lists/${listName}/items?$expand=fields&$top=5000`;
-}
-
-function itemUrl(listName, itemId) {
-  return `/sites/${CONFIG.siteId}/lists/${listName}/items/${itemId}/fields`;
-}
-
-function newItemUrl(listName) {
-  return `/sites/${CONFIG.siteId}/lists/${listName}/items`;
-}
-
-// ── Field Mappings (internal SharePoint names → friendly names) ──
-function mapPedido(f) {
-  return {
-    id: f.id,
-    Title: f.Title || '',
-    ADC: f.field_1 || '',
-    Solicitante: f.field_2 || '',
-    Projeto: f.field_3 || '',
-    SC: f.field_4 || '',
-    Destino: f.field_5 || '',
-    Modelo: f.field_6 || '',
-    PN: f.field_7 || '',
-    Quantidade: f.field_8 || 0,
-    ValorUnit: f.field_9 || 0,
-    ValorTotal: f.field_10 || 0,
-    DataPedido: f.field_11 || '',
-    DataPrevista: f.field_12 || '',
-    NotaFiscal: f.field_13 || '',
-    DataEntrega: f.field_14 || '',
-    LeadTime: f.field_15 || '',
-    Observacoes: f.field_16 || '',
-    Status: f.field_17 || '',
-    Modified: f.Modified || '',
-  };
-}
-
-function mapEstoque(f) {
-  return {
-    id: f.id,
-    Nome: f.Title || '',
-    PN: f.field_1 || '',
-    Quantidade: f.field_2 || 0,
-    QtdDisponivel: f.field_3 || 0,
-    Localizacao: f.field_4 || '',
-    SCOrigem: f.field_5 || '',
-    DataEntrada: f.field_6 || '',
-    StatusEstoque: f.field_7 || '',
-    Origem: f.field_8 || '',
-    Modified: f.Modified || '',
-  };
-}
-
-function mapMovimento(f) {
-  return {
-    id: f.id,
-    Nome: f.Title || '',
-    TipoMovimento: f.field_1 || '',
-    Modelo: f.field_2 || '',
-    Quantidade: f.field_3 || 0,
-    Responsavel: f.field_4 || '',
-    Localizacao: f.field_5 || '',
-    SCReferencia: f.field_6 || '',
-    Destino: f.field_7 || '',
-    Observacoes: f.field_8 || '',
-    Modified: f.Modified || '',
-  };
-}
-
-// ── Load All Data ──
-async function loadAllData() {
-  toast('Carregando dados...', 'warn');
-  try {
-    const [pRes, eRes, mRes] = await Promise.all([
-      graphGet(listUrl(CONFIG.listPedidos)),
-      graphGet(listUrl(CONFIG.listEstoque)),
-      graphGet(listUrl(CONFIG.listMovimentos)),
-    ]);
-    pedidos = (pRes.value || []).map(i => mapPedido({ id: i.id, ...i.fields }));
-    estoque = (eRes.value || []).map(i => mapEstoque({ id: i.id, ...i.fields }));
-    movimentos = (mRes.value || []).map(i => mapMovimento({ id: i.id, ...i.fields }));
-    renderAll();
-    toast('Dados carregados!', 'ok');
-  } catch (e) {
-    toast('Erro ao carregar: ' + e.message, 'err');
-    console.error(e);
-  }
-}
-
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  RENDER — ENTREGAS                                          ║
-// ╚══════════════════════════════════════════════════════════════╝
-function calcStatus(p) {
-  if (p.Status === 'Entregue' || p.Status === 'Cancelado') return p.Status;
-  if (p.DataPrevista && new Date(p.DataPrevista) < new Date()) return 'Atrasado';
-  return p.Status || 'Pendente';
-}
-
-function renderEntregas() {
-  const search = (document.getElementById('srchEnt').value || '').toLowerCase();
-  const ano = document.getElementById('fAnoEnt').value;
-  const status = document.getElementById('fStatusEnt').value;
-
-  let filtered = pedidos.map(p => ({ ...p, _status: calcStatus(p) }));
-  if (search) filtered = filtered.filter(p =>
-    [p.Title, p.Modelo, p.SC, p.Projeto, p.Solicitante].some(v => (v||'').toLowerCase().includes(search))
-  );
-  if (ano) filtered = filtered.filter(p => {
-    const d = p.DataEntrega || p.DataPedido;
-    return d && new Date(d).getFullYear().toString() === ano;
-  });
-  if (status) filtered = filtered.filter(p => p._status === status);
-
-  const total = filtered.length;
-  const pend = filtered.filter(p => p._status === 'Pendente' || p._status === 'Atrasado').length;
-  const ok = filtered.filter(p => p._status === 'Entregue').length;
-
-  document.getElementById('pTotal').textContent = total + ' total';
-  document.getElementById('pPend').textContent = pend + ' pendentes';
-  document.getElementById('pOk').textContent = ok + ' entregues';
-  document.getElementById('nb-ent').textContent = total;
-
-  const tb = document.getElementById('tbEnt');
-  const empty = document.getElementById('emptyEnt');
-
-  if (!filtered.length) {
-    tb.innerHTML = '';
-    empty.style.display = 'block';
-    return;
-  }
-  empty.style.display = 'none';
-
-  tb.innerHTML = filtered.map(p => `
-    <tr>
-      <td><strong>${esc(p.Title||'')}</strong></td>
-      <td>${esc(p.Modelo||'')}</td>
-      <td>${p.Quantidade||''}</td>
-      <td>${statusBadge(p._status)}</td>
-      <td>${fmtDate(p.DataPedido)}</td>
-      <td>${fmtDate(p.DataEntrega)}</td>
-      <td>${esc(p.Responsavel||p.Solicitante||'')}</td>
-      <td>
-        ${p._status !== 'Entregue' ? `<button class="act-btn act-move" onclick="moverParaEstoque('${p.id}')">→ Estoque</button>` : ''}
-      </td>
-    </tr>
-  `).join('');
-}
-
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  RENDER — ESTOQUE                                           ║
-// ╚══════════════════════════════════════════════════════════════╝
-function renderEstoque() {
-  const search = (document.getElementById('srchEst').value || '').toLowerCase();
-  const status = document.getElementById('fStatusEst').value;
-
-  let filtered = [...estoque];
-  if (search) filtered = filtered.filter(e =>
-    [e.Nome, e.PN, e.Origem].some(v => (v||'').toLowerCase().includes(search))
-  );
-  if (status) filtered = filtered.filter(e => e.StatusEstoque === status);
-
-  document.getElementById('nb-est').textContent = filtered.length;
-
-  // Cards
-  const totalQtd = filtered.reduce((s, e) => s + (Number(e.Quantidade)||0), 0);
-  const totalDisp = filtered.reduce((s, e) => s + (Number(e.QtdDisponivel)||0), 0);
-  const modelos = [...new Set(filtered.map(e => e.Nome).filter(Boolean))].length;
-
-  document.getElementById('estCards').innerHTML = `
-    <div class="card"><div class="card-label">Total de Itens</div><div class="card-value">${filtered.length}</div></div>
-    <div class="card"><div class="card-label">Quantidade Total</div><div class="card-value">${totalQtd}</div></div>
-    <div class="card"><div class="card-label">Disponível</div><div class="card-value" style="color:var(--success)">${totalDisp}</div></div>
-    <div class="card"><div class="card-label">Modelos Distintos</div><div class="card-value">${modelos}</div></div>
-  `;
-
-  const tb = document.getElementById('tbEst');
-  const empty = document.getElementById('emptyEst');
-
-  if (!filtered.length) { tb.innerHTML = ''; empty.style.display = 'block'; return; }
-  empty.style.display = 'none';
-
-  tb.innerHTML = filtered.map(e => `
-    <tr>
-      <td><strong>${esc(e.Nome||'')}</strong></td>
-      <td>${esc(e.PN||'')}</td>
-      <td>${e.Quantidade||''}</td>
-      <td>${e.QtdDisponivel||''}</td>
-      <td>${statusBadge(e.StatusEstoque||'Disponível')}</td>
-      <td>${esc(e.Origem||'')}</td>
-      <td>${fmtDate(e.DataEntrada)}</td>
-      <td>
-        <button class="act-btn act-move" onclick="moverDoEstoque('${e.id}')">⇆ Mover</button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  RENDER — MOVIMENTOS                                        ║
-// ╚══════════════════════════════════════════════════════════════╝
-function renderMovimentos() {
-  const search = (document.getElementById('srchMov').value || '').toLowerCase();
-  let filtered = [...movimentos];
-  if (search) filtered = filtered.filter(m =>
-    [m.Nome, m.Modelo, m.Destino, m.Responsavel].some(v => (v||'').toLowerCase().includes(search))
-  );
-
-  filtered.sort((a, b) => new Date(b.Modified||0) - new Date(a.Modified||0));
-  document.getElementById('nb-mov').textContent = filtered.length;
-
-  const tb = document.getElementById('tbMov');
-  const empty = document.getElementById('emptyMov');
-
-  if (!filtered.length) { tb.innerHTML = ''; empty.style.display = 'block'; return; }
-  empty.style.display = 'none';
-
-  tb.innerHTML = filtered.map(m => `
-    <tr>
-      <td>${fmtDate(m.Modified)}</td>
-      <td><strong>${esc(m.Nome||'')}</strong></td>
-      <td>${esc(m.Modelo||'')}</td>
-      <td>${m.Quantidade||''}</td>
-      <td>${esc(m.Destino||'')}</td>
-      <td>${esc(m.Responsavel||'')}</td>
-      <td>${esc(m.Observacoes||'')}</td>
-    </tr>
-  `).join('');
-}
-
-function renderAll() { renderEntregas(); renderEstoque(); renderMovimentos(); }
-
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  AÇÕES — CRIAR / MOVER                                      ║
-// ╚══════════════════════════════════════════════════════════════╝
-async function salvarPedido() {
-  const fields = {
-    Title:     v('f-ped-title'),
-    field_2:   v('f-ped-solic'),
-    field_3:   v('f-ped-projeto'),
-    field_6:   v('f-ped-modelo'),
-    field_7:   v('f-ped-pn'),
-    field_8:   Number(v('f-ped-qtd')) || 0,
-    field_9:   Number(v('f-ped-vunit')) || 0,
-    field_11:  v('f-ped-dpedido') || null,
-    field_12:  v('f-ped-dprev') || null,
-    field_17:  v('f-ped-status'),
-    field_14:  v('f-ped-dentrega') || null,
-    field_16:  v('f-ped-obs'),
-  };
-  try {
-    await graphPost(newItemUrl(CONFIG.listPedidos), { fields });
-    toast('Pedido criado!', 'ok');
-    closeModal('pedido');
-    clearForm('f-ped');
-    await loadAllData();
-  } catch (e) { toast('Erro: ' + e.message, 'err'); }
-}
-
-async function salvarEstoque() {
-  const fields = {
-    Title:     v('f-est-nome'),
-    field_1:   v('f-est-pn'),
-    field_2:   Number(v('f-est-qtd')) || 0,
-    field_3:   Number(v('f-est-qtddisp')) || 0,
-    field_7:   v('f-est-status'),
-    field_8:   v('f-est-origem'),
-    field_6:   new Date().toISOString(),
-  };
-  try {
-    await graphPost(newItemUrl(CONFIG.listEstoque), { fields });
-    toast('Item adicionado ao estoque!', 'ok');
-    closeModal('estoque');
-    clearForm('f-est');
-    await loadAllData();
-  } catch (e) { toast('Erro: ' + e.message, 'err'); }
-}
-
-async function salvarMovimento() {
-  const fields = {
-    Title:     v('f-mov-nome'),
-    field_2:   v('f-mov-modelo'),
-    field_3:   Number(v('f-mov-qtd')) || 0,
-    field_7:   v('f-mov-destino'),
-    field_4:   v('f-mov-resp'),
-    field_5:   v('f-mov-local'),
-    field_6:   v('f-mov-sc'),
-    field_8:   v('f-mov-obs'),
-  };
-  try {
-    await graphPost(newItemUrl(CONFIG.listMovimentos), { fields });
-    toast('Movimento registrado!', 'ok');
-    closeModal('movimento');
-    clearForm('f-mov');
-    await loadAllData();
-  } catch (e) { toast('Erro: ' + e.message, 'err'); }
-}
-
-async function moverParaEstoque(pedidoId) {
-  const p = pedidos.find(x => x.id === pedidoId);
-  if (!p) return;
-  if (!confirm(`Mover "${p.Title || p.Modelo}" para o estoque?`)) return;
-  try {
-    // Criar no estoque
-    await graphPost(newItemUrl(CONFIG.listEstoque), { fields: {
-      Title: p.Modelo || p.Title,
-      field_1: p.PN || '',
-      field_2: Number(p.Quantidade) || 0,
-      field_3: Number(p.Quantidade) || 0,
-      field_7: 'Disponível',
-      field_8: 'Entrega',
-      field_6: new Date().toISOString(),
-    }});
-    // Atualizar status do pedido
-    await graphPatch(itemUrl(CONFIG.listPedidos, pedidoId), { field_17: 'Entregue', field_14: new Date().toISOString() });
-    // Registrar movimento
-    await graphPost(newItemUrl(CONFIG.listMovimentos), { fields: {
-      Title: p.Modelo || p.Title,
-      field_2: p.Modelo || '',
-      field_3: Number(p.Quantidade) || 0,
-      field_7: 'Estoque',
-      field_4: currentUser?.name || '',
-      field_8: 'Entrada via pedido: ' + (p.Title || ''),
-    }});
-    toast('Item movido para o estoque!', 'ok');
-    await loadAllData();
-  } catch (e) { toast('Erro: ' + e.message, 'err'); }
-}
-
-async function moverDoEstoque(estoqueId) {
-  const e = estoque.find(x => x.id === estoqueId);
-  if (!e) return;
-  const destino = prompt('Destino da movimentação:', 'Cliente');
-  if (!destino) return;
-  try {
-    // Atualizar estoque
-    await graphPatch(itemUrl(CONFIG.listEstoque, estoqueId), { field_7: 'Movimentado' });
-    // Registrar movimento
-    await graphPost(newItemUrl(CONFIG.listMovimentos), { fields: {
-      Title: e.Nome || '',
-      field_2: e.Nome || '',
-      field_3: Number(e.Quantidade) || 0,
-      field_7: destino,
-      field_4: currentUser?.name || '',
-      field_8: 'Saída do estoque',
-    }});
-    toast('Movimentação registrada!', 'ok');
-    await loadAllData();
-  } catch (e2) { toast('Erro: ' + e2.message, 'err'); }
-}
-
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  IMPORTAR PEDIDOS DO EXCEL                                   ║
-// ╚══════════════════════════════════════════════════════════════╝
-async function importarExcel(input) {
-  const file = input.files[0];
-  if (!file) return;
-  input.value = '';
-
-  toast('Lendo Excel...', 'warn');
-  const data = await file.arrayBuffer();
-  const wb = XLSX.read(data);
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
-
-  if (!rows.length) { toast('Excel vazio!', 'err'); return; }
-  if (!confirm(`Importar ${rows.length} registros para GTI_Pedidos?`)) return;
-
-  // Mapeamento colunas Excel → campos internos SharePoint
-  // Campos NUMBER só recebem números válidos, o resto é ignorado
-  function toNum(v) { const n = parseFloat(String(v).replace(',','.')); return isFinite(n) ? n : null; }
-
-  function mapRow(row) {
-    const f = {};
-    // Title (texto) - obrigatório
-    if (row['Ano']) f.Title = String(row['Ano']);
-    // Textos
-    if (row['ADC']) f.field_1 = String(row['ADC']);
-    if (row['SC']) f.field_4 = String(row['SC']);
-    if (row['Destino']) f.field_5 = String(row['Destino']);
-    if (row['Modelo']) f.field_6 = String(row['Modelo']);
-    if (row['PN']) f.field_7 = String(row['PN']);
-    if (row['Status']) f.field_17 = String(row['Status']);
-    // Números
-    const solic = toNum(row['Solicitante']); if (solic !== null) f.field_2 = solic;
-    const proj = toNum(row['Projeto']); if (proj !== null) f.field_3 = proj;
-    const qtd = toNum(row['Quantidade']); if (qtd !== null) f.field_8 = qtd;
-    const vunit = toNum(row['ValorUnit']); if (vunit !== null) f.field_9 = vunit;
-    const vtotal = toNum(row['ValorTotal']); if (vtotal !== null) f.field_10 = vtotal;
-    const nf = toNum(row['NotaFiscal']); if (nf !== null) f.field_13 = nf;
-    const lead = toNum(row['LeadTime']); if (lead !== null) f.field_15 = lead;
-    // Datas e Obs são NUMBER no SP - só enviar se for número
-    const dpedido = toNum(row['DataPedido']); if (dpedido !== null) f.field_11 = dpedido;
-    const dprev = toNum(row['DataPrevista']); if (dprev !== null) f.field_12 = dprev;
-    const dentrega = toNum(row['DataEntrega']); if (dentrega !== null) f.field_14 = dentrega;
-    const obs = toNum(row['Observacoes']); if (obs !== null) f.field_16 = obs;
-    return f;
-  }
-
-  const URL = `${graphBase}/sites/${CONFIG.siteId}/lists/${CONFIG.listPedidos}/items`;
-  let ok = 0, erros = 0;
-  const total = rows.length;
-
-  for (let i = 0; i < total; i++) {
-    const fields = mapRow(rows[i]);
-    try {
-      if (i % 50 === 0) await getToken();
-      let r = await fetch(URL, {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fields })
-      });
-      // Retry once on 500/429/401 errors
-      if (r.status === 500 || r.status === 429 || r.status === 401) {
-        await new Promise(r => setTimeout(r, 2000));
-        await getToken();
-        r = await fetch(URL, {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fields })
-        });
-      }
-      if (r.ok) ok++; else { erros++; if (erros <= 3) { const t = await r.text(); console.error('Erro linha '+(i+1)+':', t); } }
-    } catch(e) { erros++; }
-    if (i % 50 === 0) toast(`Importando: ${i+1}/${total} (${ok} ok, ${erros} erros)`, 'warn');
-    await new Promise(r => setTimeout(r, 500));
-  }
-
-  toast(`Importação concluída! ${ok} de ${total}`, ok > 0 ? 'ok' : 'err');
-  alert(`Importação concluída! ${ok} importados, ${erros} erros.`);
-  await loadAllData();
-}
-
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  EXPORT EXCEL                                                ║
-// ╚══════════════════════════════════════════════════════════════╝
-function exportExcel() {
-  const wb = XLSX.utils.book_new();
-  // Entregas
-  const wsPed = XLSX.utils.json_to_sheet(pedidos.map(p => ({
-    'TÍTULO': p.Title, 'SOLICITANTE': p.Solicitante, 'PROJETO': p.Projeto,
-    'MODELO': p.Modelo, 'PN': p.PN, 'QTD': p.Quantidade,
-    'STATUS': calcStatus(p), 'DATA PEDIDO': fmtDate(p.DataPedido),
-    'DATA ENTREGA': fmtDate(p.DataEntrega), 'OBS': p.Observacoes
-  })));
-  XLSX.utils.book_append_sheet(wb, wsPed, 'Entregas');
-  // Estoque
-  const wsEst = XLSX.utils.json_to_sheet(estoque.map(e => ({
-    'NOME': e.Nome, 'PN': e.PN, 'QTD': e.Quantidade,
-    'DISPONÍVEL': e.QtdDisponivel, 'STATUS': e.StatusEstoque,
-    'ORIGEM': e.Origem, 'DATA ENTRADA': fmtDate(e.DataEntrada)
-  })));
-  XLSX.utils.book_append_sheet(wb, wsEst, 'Estoque');
-  // Movimentos
-  const wsMov = XLSX.utils.json_to_sheet(movimentos.map(m => ({
-    'DATA': fmtDate(m.Modified), 'NOME': m.Nome, 'MODELO': m.Modelo,
-    'QTD': m.Quantidade, 'DESTINO': m.Destino, 'RESPONSÁVEL': m.Responsavel,
-    'OBS': m.Observacoes
-  })));
-  XLSX.utils.book_append_sheet(wb, wsMov, 'Movimentos');
-
-  const dt = new Date();
-  const ds = `${dt.getDate().toString().padStart(2,'0')}_${(dt.getMonth()+1).toString().padStart(2,'0')}_${dt.getFullYear()}`;
-  XLSX.writeFile(wb, `GTI_Relatorio_${ds}.xlsx`);
-  toast('Excel exportado!', 'ok');
-}
-
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  HELPERS                                                     ║
-// ╚══════════════════════════════════════════════════════════════╝
-function v(id) { return (document.getElementById(id)?.value || '').trim(); }
-function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-
-function fmtDate(d) {
-  if (!d) return '—';
-  try {
-    const dt = new Date(d);
-    if (isNaN(dt)) return d;
-    return dt.toLocaleDateString('pt-BR');
-  } catch { return d; }
-}
-
-function statusBadge(s) {
-  const cls = (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'');
-  return `<span class="st st-${cls}"><span class="st-dot"></span>${esc(s||'')}</span>`;
-}
-
-function setPage(page) {
-  currentPage = page;
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('page-' + page).classList.add('active');
-  document.querySelector(`.nav-tab[data-page="${page}"]`).classList.add('active');
-}
-
-function openModal(type) { document.getElementById('modal-' + type).classList.add('show'); }
-function closeModal(type) { document.getElementById('modal-' + type).classList.remove('show'); }
-
-function clearForm(prefix) {
-  document.querySelectorAll(`[id^="${prefix}"]`).forEach(el => {
-    if (el.tagName === 'SELECT') el.selectedIndex = 0;
-    else el.value = '';
-  });
-}
-
-function toggleTheme() {
-  darkMode = !darkMode;
-  document.body.classList.toggle('dark', darkMode);
-}
-
-let toastTimer;
-function toast(msg, type) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show toast-' + (type||'ok');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
-}
-
-// Close modal on overlay click
-document.querySelectorAll('.modal-overlay').forEach(o => {
-  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('show'); });
-});
+const CONFIG={clientId:'77560595-75a5-4ad0-a946-8574548c64cb',tenantId:'d64646e6-e0d7-4f85-b443-6170dfec0af4',siteId:'nasnuvensrnp.sharepoint.com,4584015d-88fd-4bc7-9f07-50ab167f590d,cc96f366-0544-4459-ac49-73b7f29d9c49',listPedidos:'GTI_Pedidos',listEstoque:'GTI_Estoque',listMovimentos:'GTI_Movimentos'};
+const REDIRECT_URI=window.location.origin+window.location.pathname;
+const msalConfig={auth:{clientId:CONFIG.clientId,authority:'https://login.microsoftonline.com/'+CONFIG.tenantId,redirectUri:REDIRECT_URI},cache:{cacheLocation:'localStorage',storeAuthStateInCookie:true}};
+const loginRequest={scopes:['User.Read','Sites.ReadWrite.All']};
+let accessToken=null,currentUser=null,msalApp=null;
+let pedidos=[],estoque=[],movimentos=[];
+let chartBar=null,chartPie=null,chartEst=null;
+async function initMsal(){msalApp=new msal.PublicClientApplication(msalConfig);await msalApp.initialize();const a=msalApp.getAllAccounts();if(a.length>0){currentUser=a[0];try{await getToken();showApp()}catch(e){}}}
+async function doLogin(){try{if(!msalApp)await initMsal();const r=await msalApp.loginPopup(loginRequest);currentUser=r.account;await getToken();showApp()}catch(e){document.getElementById('authError').textContent='Erro: '+(e.errorMessage||e.message)}}
+async function getToken(){try{const a=msalApp.getAllAccounts();if(!a.length)throw 0;const r=await msalApp.acquireTokenSilent({...loginRequest,account:a[0]});accessToken=r.accessToken;return accessToken}catch(e){try{const r=await msalApp.acquireTokenPopup(loginRequest);accessToken=r.accessToken;return accessToken}catch(e2){return accessToken}}}
+function doLogout(){msalApp.logoutPopup()}
+function showApp(){document.getElementById('authScreen').style.display='none';document.getElementById('appWrap').style.display='flex';if(currentUser){const n=currentUser.name||currentUser.userName;document.getElementById('sbName').textContent=n;document.getElementById('sbAvatar').textContent=n.charAt(0).toUpperCase()}loadAllData()}
+initMsal().catch(e=>console.log('MSAL:',e));
+const graphBase='https://graph.microsoft.com/v1.0';
+async function graphGet(u){await getToken();const r=await fetch(graphBase+u,{headers:{Authorization:'Bearer '+accessToken}});if(!r.ok)throw new Error('GET '+r.status);return r.json()}
+async function graphPost(u,b){await getToken();const r=await fetch(graphBase+u,{method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify(b)});if(!r.ok)throw new Error('POST '+r.status);return r.json()}
+async function graphPatch(u,b){await getToken();const r=await fetch(graphBase+u,{method:'PATCH',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify(b)});if(!r.ok)throw new Error('PATCH '+r.status);return r.json()}
+function listUrl(l){return'/sites/'+CONFIG.siteId+'/lists/'+l+'/items?$expand=fields&$top=5000'}
+function itemUrl(l,id){return'/sites/'+CONFIG.siteId+'/lists/'+l+'/items/'+id+'/fields'}
+function newItemUrl(l){return'/sites/'+CONFIG.siteId+'/lists/'+l+'/items'}
+function mapPedido(f){return{id:f.id,Title:f.Title||'',ADC:f.field_1||'',Solicitante:f.field_2||'',Projeto:f.field_3||'',SC:f.field_4||'',Destino:f.field_5||'',Modelo:f.field_6||'',PN:f.field_7||'',Quantidade:f.field_8||0,ValorUnit:f.field_9||0,DataPedido:f.field_11||'',DataPrevista:f.field_12||'',DataEntrega:f.field_14||'',Observacoes:f.field_16||'',Status:f.field_17||'',Modified:f.Modified||''}}
+function mapEstoque(f){return{id:f.id,Nome:f.Title||'',PN:f.field_1||'',Quantidade:f.field_2||0,QtdDisponivel:f.field_3||0,Localizacao:f.field_4||'',DataEntrada:f.field_6||'',StatusEstoque:f.field_7||'',Origem:f.field_8||'',Modified:f.Modified||''}}
+function mapMovimento(f){return{id:f.id,Nome:f.Title||'',TipoMovimento:f.field_1||'',Modelo:f.field_2||'',Quantidade:f.field_3||0,Responsavel:f.field_4||'',Localizacao:f.field_5||'',Destino:f.field_7||'',Observacoes:f.field_8||'',Modified:f.Modified||''}}
+async function loadAllData(){toast('Carregando...','warn');try{const[p,e,m]=await Promise.all([graphGet(listUrl(CONFIG.listPedidos)),graphGet(listUrl(CONFIG.listEstoque)),graphGet(listUrl(CONFIG.listMovimentos))]);pedidos=(p.value||[]).map(i=>mapPedido({id:i.id,...i.fields}));estoque=(e.value||[]).map(i=>mapEstoque({id:i.id,...i.fields}));movimentos=(m.value||[]).map(i=>mapMovimento({id:i.id,...i.fields}));renderAll();toast('Dados carregados!','ok')}catch(e){toast('Erro: '+e.message,'err');console.error(e)}}
+function v(id){return(document.getElementById(id)?.value||'').trim()}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function fmtDate(d){if(!d)return'\u2014';try{const dt=new Date(d);if(isNaN(dt))return String(d);return dt.toLocaleDateString('pt-BR')}catch{return String(d)}}
+function calcStatus(p){if(p.Status==='Entregue'||p.Status==='Cancelado')return p.Status;if(p.DataPrevista&&new Date(p.DataPrevista)<new Date())return'Atrasado';return p.Status||'Pendente'}
+function badge(s){const c=(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'');return'<span class="badge b-'+c+'"><span class="badge-dot"></span>'+esc(s||'')+'</span>'}
+function renderAll(){renderDashboard();renderEntregas();renderEstoque();renderMovimentos()}
+function renderDashboard(){var t=pedidos.length,en=pedidos.filter(function(p){return calcStatus(p)==='Entregue'}).length,pe=pedidos.filter(function(p){return calcStatus(p)==='Pendente'}).length,at=pedidos.filter(function(p){return calcStatus(p)==='Atrasado'}).length;var te=estoque.reduce(function(s,e){return s+(Number(e.QtdDisponivel)||0)},0);document.getElementById('dashKpis').innerHTML='<div class="kpi" style="border-left-color:#4338ca"><div class="kpi-label">Total Pedidos</div><div class="kpi-value">'+t+'</div><div class="kpi-sub">2026</div></div><div class="kpi" style="border-left-color:#059669"><div class="kpi-label">Entregues</div><div class="kpi-value">'+en+'</div><div class="kpi-sub">'+(t?Math.round(en/t*100):0)+'% concluídos</div></div><div class="kpi" style="border-left-color:#d97706"><div class="kpi-label">Pendentes</div><div class="kpi-value">'+pe+'</div></div><div class="kpi" style="border-left-color:#7c3aed"><div class="kpi-label">Em Estoque</div><div class="kpi-value">'+te+'</div><div class="kpi-sub">'+estoque.length+' modelos</div></div>';if(chartBar)chartBar.destroy();chartBar=new Chart(document.getElementById('chartBar'),{type:'bar',data:{labels:['Entregue','Pendente','Atrasado','Cancelado'],datasets:[{data:[en,pe,at,pedidos.filter(function(p){return p.Status==='Cancelado'}).length],backgroundColor:['#059669','#d97706','#dc2626','#9ca3af'],borderRadius:8,barThickness:40}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#f0f0f0'}},x:{grid:{display:false}}}}});var cats={};estoque.forEach(function(e){var n=e.Nome.split(' ')[0];cats[n]=(cats[n]||0)+(Number(e.Quantidade)||0)});if(chartPie)chartPie.destroy();chartPie=new Chart(document.getElementById('chartPie'),{type:'doughnut',data:{labels:Object.keys(cats),datasets:[{data:Object.values(cats),backgroundColor:['#4338ca','#7c3aed','#a78bfa','#c4b5fd','#e0e7ff','#818cf8'],borderWidth:0}]},options:{responsive:true,cutout:'65%',plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}}});document.getElementById('miniPedidos').innerHTML=pedidos.slice(0,4).map(function(p){return'<div class="mini-item"><div class="mini-icon" style="background:#e0e7ff">\ud83d\udce6</div><div class="mini-info"><p>'+esc(p.Modelo||p.Title)+'</p><span>'+esc(p.ADC)+' \xb7 Qtd: '+p.Quantidade+'</span></div>'+badge(calcStatus(p))+'</div>'}).join('');document.getElementById('miniMov').innerHTML=movimentos.slice(0,4).map(function(m){return'<div class="mini-item"><div class="mini-icon" style="background:'+(m.TipoMovimento==='Entrada'?'#d1fae5':'#fef3c7')+'">\u21c6</div><div class="mini-info"><p>'+esc(m.Nome)+'</p><span>'+fmtDate(m.Modified)+' \xb7 '+esc(m.Destino||'')+'</span></div><span style="font-family:var(--mono);font-weight:700;font-size:12px">'+m.Quantidade+'</span></div>'}).join('')}
+function renderEntregas(){var s=(document.getElementById('srchEnt').value||'').toLowerCase(),ano=document.getElementById('fAnoEnt').value,st=document.getElementById('fStatusEnt').value;var f=pedidos.map(function(p){return Object.assign({},p,{_st:calcStatus(p)})});if(s)f=f.filter(function(p){return[p.Title,p.Modelo,p.SC,p.Projeto,p.ADC].some(function(v){return(v||'').toLowerCase().indexOf(s)>=0})});if(ano)f=f.filter(function(p){var d=p.DataEntrega||p.DataPedido;return d&&String(d).indexOf(ano)>=0});if(st)f=f.filter(function(p){return p._st===st});document.getElementById('pTotal').textContent=f.length+' pedidos';document.getElementById('nb-ent').textContent=f.length;document.getElementById('tbEnt').innerHTML=f.map(function(p){return'<tr><td style="font-weight:600;color:#4338ca;font-size:12px">'+esc(p.ADC||p.Title)+'</td><td><div style="font-weight:500;font-size:12px">'+esc(p.Modelo)+'</div><div style="font-size:11px;color:#9ca3af;margin-top:2px">PN: '+esc(p.PN)+'</div></td><td style="font-family:var(--mono);font-weight:700">'+p.Quantidade+'</td><td>'+badge(p._st)+'</td><td style="color:var(--text3);font-size:12px">'+fmtDate(p.DataPedido)+'</td><td style="color:var(--text3);font-size:12px">'+fmtDate(p.DataEntrega)+'</td><td style="font-size:12px">'+esc(p.Destino)+'</td><td>'+(p._st!=='Entregue'?'<button class="act act-green" onclick="moverParaEstoque(\''+p.id+'\')">→ Estoque</button>':'')+'</td></tr>'}).join('')}
+function renderEstoque(){var tq=estoque.reduce(function(s,e){return s+(Number(e.Quantidade)||0)},0),td=estoque.reduce(function(s,e){return s+(Number(e.QtdDisponivel)||0)},0);document.getElementById('nb-est').textContent=estoque.length;document.getElementById('estKpis').innerHTML='<div class="kpi" style="border-left-color:#4338ca"><div class="kpi-label">Itens</div><div class="kpi-value">'+estoque.length+'</div></div><div class="kpi" style="border-left-color:#7c3aed"><div class="kpi-label">Qtd Total</div><div class="kpi-value">'+tq+'</div></div><div class="kpi" style="border-left-color:#059669"><div class="kpi-label">Disponível</div><div class="kpi-value">'+td+'</div></div><div class="kpi" style="border-left-color:#dc2626"><div class="kpi-label">Em Falta</div><div class="kpi-value">'+estoque.filter(function(e){return Number(e.QtdDisponivel)===0}).length+'</div></div>';if(chartEst)chartEst.destroy();chartEst=new Chart(document.getElementById('chartEstoque'),{type:'bar',data:{labels:estoque.map(function(e){return e.Nome.split(' ').slice(0,2).join(' ')}),datasets:[{label:'Total',data:estoque.map(function(e){return Number(e.Quantidade)||0}),backgroundColor:'#e0e7ff',borderRadius:6},{label:'Disponível',data:estoque.map(function(e){return Number(e.QtdDisponivel)||0}),backgroundColor:'#4338ca',borderRadius:6}]},options:{responsive:true,plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:11}}}},scales:{y:{beginAtZero:true,grid:{color:'#f0f0f0'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});document.getElementById('tbEst').innerHTML=estoque.map(function(e){return'<tr><td style="font-weight:600;font-size:12px">'+esc(e.Nome)+'</td><td style="font-size:12px;color:var(--text3)">'+esc(e.PN)+'</td><td style="font-family:var(--mono);font-weight:700">'+e.Quantidade+'</td><td><span style="font-family:var(--mono);font-weight:700;color:'+(Number(e.QtdDisponivel)===0?'#dc2626':'#059669')+'">'+e.QtdDisponivel+'</span></td><td>'+badge(e.StatusEstoque||'Disponível')+'</td><td style="font-size:12px">'+esc(e.Origem)+'</td><td style="font-size:12px;color:var(--text3)">'+fmtDate(e.DataEntrada)+'</td><td><button class="act act-indigo" onclick="moverDoEstoque(\''+e.id+'\')">\u21c6 Mover</button></td></tr>'}).join('')}
+function renderMovimentos(){var sorted=movimentos.slice().sort(function(a,b){return new Date(b.Modified||0)-new Date(a.Modified||0)});document.getElementById('nb-mov').textContent=sorted.length;var en=sorted.filter(function(m){return m.TipoMovimento==='Entrada'}).length;document.getElementById('movKpis').innerHTML='<div class="kpi" style="border-left-color:#4338ca"><div class="kpi-label">Total</div><div class="kpi-value">'+sorted.length+'</div></div><div class="kpi" style="border-left-color:#059669"><div class="kpi-label">Entradas</div><div class="kpi-value">'+en+'</div></div><div class="kpi" style="border-left-color:#d97706"><div class="kpi-label">Saídas</div><div class="kpi-value">'+(sorted.length-en)+'</div></div>';document.getElementById('tbMov').innerHTML=sorted.map(function(m){return'<tr><td style="font-size:12px;font-weight:500">'+fmtDate(m.Modified)+'</td><td style="font-weight:600;font-size:12px">'+esc(m.Nome)+'</td><td style="font-family:var(--mono);font-weight:700">'+m.Quantidade+'</td><td>'+badge(m.TipoMovimento||'Saída')+'</td><td style="font-size:12px">'+esc(m.Destino||'')+'</td><td style="font-size:12px;color:var(--text3)">'+esc(m.Responsavel)+'</td><td style="font-size:12px;color:var(--text3);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(m.Observacoes)+'</td></tr>'}).join('')}
+async function salvarPedido(){var fields={Title:v('f-ped-title'),field_2:v('f-ped-solic'),field_3:v('f-ped-projeto'),field_6:v('f-ped-modelo'),field_7:v('f-ped-pn'),field_8:Number(v('f-ped-qtd'))||0,field_9:Number(v('f-ped-vunit'))||0,field_11:v('f-ped-dpedido')||null,field_12:v('f-ped-dprev')||null,field_17:v('f-ped-status'),field_14:v('f-ped-dentrega')||null,field_16:v('f-ped-obs')};try{await graphPost(newItemUrl(CONFIG.listPedidos),{fields:fields});toast('Pedido criado!','ok');closeModal('pedido');clearForm('f-ped');await loadAllData()}catch(e){toast('Erro: '+e.message,'err')}}
+async function salvarEstoque(){var fields={Title:v('f-est-nome'),field_1:v('f-est-pn'),field_2:Number(v('f-est-qtd'))||0,field_3:Number(v('f-est-qtddisp'))||0,field_7:v('f-est-status'),field_8:v('f-est-origem'),field_6:new Date().toISOString()};try{await graphPost(newItemUrl(CONFIG.listEstoque),{fields:fields});toast('Item adicionado!','ok');closeModal('estoque');clearForm('f-est');await loadAllData()}catch(e){toast('Erro: '+e.message,'err')}}
+async function salvarMovimento(){var fields={Title:v('f-mov-nome'),field_2:v('f-mov-modelo'),field_3:Number(v('f-mov-qtd'))||0,field_7:v('f-mov-destino'),field_4:v('f-mov-resp'),field_5:v('f-mov-local'),field_6:v('f-mov-sc'),field_8:v('f-mov-obs')};try{await graphPost(newItemUrl(CONFIG.listMovimentos),{fields:fields});toast('Registrado!','ok');closeModal('movimento');clearForm('f-mov');await loadAllData()}catch(e){toast('Erro: '+e.message,'err')}}
+async function moverParaEstoque(id){var p=pedidos.find(function(x){return x.id===id});if(!p||!confirm('Mover "'+p.Modelo+'" para estoque?'))return;try{await graphPost(newItemUrl(CONFIG.listEstoque),{fields:{Title:p.Modelo||p.Title,field_1:p.PN||'',field_2:Number(p.Quantidade)||0,field_3:Number(p.Quantidade)||0,field_7:'Disponível',field_8:'Entrega',field_6:new Date().toISOString()}});await graphPatch(itemUrl(CONFIG.listPedidos,id),{field_17:'Entregue',field_14:new Date().toISOString()});await graphPost(newItemUrl(CONFIG.listMovimentos),{fields:{Title:p.Modelo||p.Title,field_2:p.Modelo||'',field_3:Number(p.Quantidade)||0,field_7:'Estoque',field_4:currentUser?.name||'',field_8:'Entrada via pedido'}});toast('Movido!','ok');await loadAllData()}catch(e){toast('Erro: '+e.message,'err')}}
+async function moverDoEstoque(id){var e=estoque.find(function(x){return x.id===id});if(!e)return;var dest=prompt('Destino:','Cliente');if(!dest)return;try{await graphPatch(itemUrl(CONFIG.listEstoque,id),{field_7:'Movimentado'});await graphPost(newItemUrl(CONFIG.listMovimentos),{fields:{Title:e.Nome||'',field_2:e.Nome||'',field_3:Number(e.Quantidade)||0,field_7:dest,field_4:currentUser?.name||'',field_8:'Saída do estoque'}});toast('Registrado!','ok');await loadAllData()}catch(e2){toast('Erro: '+e2.message,'err')}}
+async function importarExcel(input){var file=input.files[0];if(!file)return;input.value='';toast('Lendo...','warn');var data=await file.arrayBuffer();var wb=XLSX.read(data);var ws=wb.Sheets[wb.SheetNames[0]];var rows=XLSX.utils.sheet_to_json(ws,{defval:''});if(!rows.length){toast('Vazio!','err');return}if(!confirm('Importar '+rows.length+' registros?'))return;function toNum(v){var n=parseFloat(String(v).replace(',','.'));return isFinite(n)?n:null}function mapRow(r){var f={};if(r.Ano)f.Title=String(r.Ano);if(r.ADC)f.field_1=String(r.ADC);if(r.SC)f.field_4=String(r.SC);if(r.Destino)f.field_5=String(r.Destino);if(r.Modelo)f.field_6=String(r.Modelo);if(r.PN)f.field_7=String(r.PN);if(r.Status)f.field_17=String(r.Status);var s=toNum(r.Solicitante);if(s!==null)f.field_2=s;var p=toNum(r.Projeto);if(p!==null)f.field_3=p;var q=toNum(r.Quantidade);if(q!==null)f.field_8=q;var vu=toNum(r.ValorUnit);if(vu!==null)f.field_9=vu;var nf=toNum(r.NotaFiscal);if(nf!==null)f.field_13=nf;var dp=toNum(r.DataPedido);if(dp!==null)f.field_11=dp;var dv=toNum(r.DataPrevista);if(dv!==null)f.field_12=dv;var de=toNum(r.DataEntrega);if(de!==null)f.field_14=de;return f}var URL=graphBase+'/sites/'+CONFIG.siteId+'/lists/'+CONFIG.listPedidos+'/items';var ok=0,er=0,total=rows.length;for(var i=0;i<total;i++){var fields=mapRow(rows[i]);try{if(i%50===0)await getToken();var r=await fetch(URL,{method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});if(r.status===500||r.status===429||r.status===401){await new Promise(function(res){setTimeout(res,2000)});await getToken();r=await fetch(URL,{method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({fields:fields})})}if(r.ok)ok++;else{er++;if(er<=3){var t=await r.text();console.error('Erro '+(i+1)+':',t)}}}catch(e){er++}if(i%50===0)toast('Importando: '+(i+1)+'/'+total+' ('+ok+' ok, '+er+' erros)','warn');await new Promise(function(res){setTimeout(res,500)})}toast('Concluído! '+ok+' de '+total,'ok');alert('Importação: '+ok+' importados, '+er+' erros.');await loadAllData()}
+function exportExcel(){var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(pedidos.map(function(p){return{TÍTULO:p.Title,ADC:p.ADC,MODELO:p.Modelo,PN:p.PN,QTD:p.Quantidade,STATUS:calcStatus(p)}})),'Entregas');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(estoque.map(function(e){return{NOME:e.Nome,PN:e.PN,QTD:e.Quantidade,DISPONÍVEL:e.QtdDisponivel,STATUS:e.StatusEstoque}})),'Estoque');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(movimentos.map(function(m){return{NOME:m.Nome,QTD:m.Quantidade,DESTINO:m.Destino,RESPONSÁVEL:m.Responsavel}})),'Movimentos');var d=new Date();XLSX.writeFile(wb,'GTI_'+d.getDate()+'_'+(d.getMonth()+1)+'_'+d.getFullYear()+'.xlsx');toast('Exportado!','ok')}
+function setPage(p){document.querySelectorAll('.page').forEach(function(x){x.classList.remove('active')});document.querySelectorAll('.sb-item').forEach(function(x){x.classList.remove('active')});document.getElementById('page-'+p).classList.add('active');document.querySelector('.sb-item[data-page="'+p+'"]').classList.add('active');if(p==='dashboard')renderDashboard();if(p==='estoque')setTimeout(renderEstoque,50)}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('collapsed')}
+function openModal(t){document.getElementById('modal-'+t).classList.add('show')}
+function closeModal(t){document.getElementById('modal-'+t).classList.remove('show')}
+function clearForm(pfx){document.querySelectorAll('[id^="'+pfx+'"]').forEach(function(el){if(el.tagName==='SELECT')el.selectedIndex=0;else el.value=''})}
+var toastTimer;function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='toast show toast-'+(type||'ok');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('show')},3000)}
+document.querySelectorAll('.modal-bg').forEach(function(o){o.addEventListener('click',function(e){if(e.target===o)o.classList.remove('show')})});
 </script>
 </body>
 </html>
